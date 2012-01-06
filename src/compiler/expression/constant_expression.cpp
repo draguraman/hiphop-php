@@ -176,8 +176,8 @@ ExpressionPtr ConstantExpression::preOptimize(AnalysisResultConstPtr ar) {
     }
 
     Variant scalarValue;
-    if (value->getScalarValue(scalarValue) &&
-        !scalarValue.isAllowedAsConstantValue()) {
+    if (Option::DynamicConstants || (value->getScalarValue(scalarValue) &&
+        !scalarValue.isAllowedAsConstantValue())) {
       // block further optimization
       const_cast<Symbol*>(sym)->setDynamic();
       m_dynamic = true;
@@ -259,7 +259,7 @@ TypePtr ConstantExpression::inferTypes(AnalysisResultPtr ar, TypePtr type,
         m_valid = true;
       }
     }
-    if (!m_dynamic && isDynamic) {
+    if (Option::DynamicConstants || (!m_dynamic && isDynamic)) {
       m_dynamic = true;
       actualType = Type::Variant;
     }

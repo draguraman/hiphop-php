@@ -1860,6 +1860,13 @@ void SimpleFunctionCall::outputCPPImpl(CodeGenerator &cg,
             value->outputCPP(cg, ar);
           }
         }
+      } else if(Option::DynamicConstants) {
+        ExpressionPtr defnam = (*m_params)[0];
+        cg_printf("g->declareDynamicConstant(");
+        defnam->outputCPP(cg, ar);
+        cg_printf(", ");
+        value->outputCPP(cg, ar);
+        cg_printf(")");
       } else {
         bool close = false;
         if (value->hasEffect()) {

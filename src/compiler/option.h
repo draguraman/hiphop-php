@@ -335,9 +335,11 @@ public:
   /**
    * "Dynamic" means a function or a method can be invoked dynamically.
    * "Volatile" means a class or a function can be declared dynamically.
+   * "DynamicConstants" means all constant resolution is done dynamically.
    */
   static bool AllDynamic;
   static bool AllVolatile;
+  static bool DynamicConstants;
 
   /**
    * Optimizations

@@ -107,6 +107,11 @@ bool Globals::declareConstant(CStrRef name, Variant &constant,
   return false;
 }
 
+bool Globals::declareDynamicConstant(CStrRef name, CVarRef value) {
+  Variant constant;
+  return Globals::declareConstant(name, constant, value);
+}
+
 void Globals::declareFunction(const char *name) {
   String func(Util::toLower(name));
   if (m_volatileFunctions.exists(func)) {

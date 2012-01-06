@@ -67,12 +67,13 @@ String get_static_class_name(CVarRef objOrClassName) {
 
 Variant getDynamicConstant(CVarRef v, CStrRef name) {
   if (isInitialized(v)) return v;
-  raise_notice("Use of undefined constant %s - assumed '%s'",
-               name.c_str(), name.c_str());
-  return name;
+  /* built-in missing, fall back to runtime defines */
+  return getUndefinedConstant(name);
 }
 
-String getUndefinedConstant(CStrRef name) {
+Variant getUndefinedConstant(CStrRef name) {
+  CVarRef v = ((Globals *)get_global_variables())->getConstant(name.c_str());
+  if (isInitialized(v)) return v;
   raise_notice("Use of undefined constant %s - assumed '%s'",
                name.c_str(), name.c_str());
   return name;

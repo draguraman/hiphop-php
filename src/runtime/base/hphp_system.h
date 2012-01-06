@@ -54,6 +54,7 @@ public:
   Globals() : FVF(__autoload)(false) {}
   void initialize();
   bool declareConstant(CStrRef name, Variant &constant, CVarRef value);
+  bool declareDynamicConstant(CStrRef name, CVarRef value);
   void declareFunction(const char *name);
   void declareFunctionLit(CStrRef name);
   bool defined(CStrRef name);

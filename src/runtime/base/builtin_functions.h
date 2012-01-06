@@ -236,7 +236,7 @@ bool set_line(int line0, int char0 = 0, int line1 = 0, int char1 = 0);
 
 inline bool isInitialized(CVarRef v) { return v.isInitialized();}
 Variant getDynamicConstant(CVarRef v, CStrRef name);
-String getUndefinedConstant(CStrRef name);
+Variant getUndefinedConstant(CStrRef name);
 
 inline bool isset(bool v)    { return true; }
 inline bool isset(char v)    { return true; }
