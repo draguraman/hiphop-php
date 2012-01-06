@@ -74,9 +74,11 @@ set<string> Option::VolatileClasses;
 
 map<string, string> Option::FunctionSections;
 
+#if 0
 #if defined(HPHP_OSS)
 string Option::IdPrefix = "___";
 string Option::LabelEscape = "___";
+#endif
 #else
 string Option::IdPrefix = "$$";
 string Option::LabelEscape = "$";
