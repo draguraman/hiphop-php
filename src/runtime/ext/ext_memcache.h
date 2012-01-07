@@ -29,6 +29,7 @@ Object f_memcache_connect(CStrRef host, int port = 0, int timeout = 0, int timeo
 Object f_memcache_pconnect(CStrRef host, int port = 0, int timeout = 0, int timeoutms = 0);
 bool f_memcache_add(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0);
 bool f_memcache_set(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0);
+bool f_memcache_cas(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0, int64 cas = 0);
 bool f_memcache_replace(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0);
 Variant f_memcache_get(CObjRef memcache, CVarRef key, VRefParam flags = null);
 bool f_memcache_delete(CObjRef memcache, CStrRef key, int expire = 0);
@@ -67,10 +68,14 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(add);
   public: bool t_set(CStrRef key, CVarRef var, int flag = 0, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(set);
+  public: bool t_cas(CStrRef key, CVarRef var, int flag = 0, int expire = 0, int64 cas = 0);
+  DECLARE_METHOD_INVOKE_HELPERS(cas);
   public: bool t_replace(CStrRef key, CVarRef var, int flag = 0, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(replace);
   public: Variant t_get(CVarRef key, VRefParam flags = null);
   DECLARE_METHOD_INVOKE_HELPERS(get);
+  public: Variant t_get2(CVarRef key, VRefParam val, VRefParam flags = null, VRefParam cas = null);
+  DECLARE_METHOD_INVOKE_HELPERS(get2);
   public: bool t_delete(CStrRef key, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(delete);
   public: int64 t_increment(CStrRef key, int offset = 1);

@@ -204,6 +204,29 @@ bool c_Memcache::t_set(CStrRef key, CVarRef var, int flag /*= 0*/,
   return false;
 }
 
+bool c_Memcache::t_cas(CStrRef key, CVarRef var, int flag /*= 0*/,
+                       int expire /*= 0*/, int64 cas /*= 0*/) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::cas);
+  if (key.empty()) {
+    raise_warning("Key cannot be empty");
+    return false;
+  }
+
+  String serialized = memcache_prepare_for_storage(var, flag);
+
+  memcached_return_t ret = memcached_cas(&m_memcache,
+                                        key.c_str(), key.length(),
+                                        serialized.c_str(),
+                                        serialized.length(),
+                                        expire, flag, cas);
+
+  if (ret == MEMCACHED_SUCCESS) {
+    return true;
+  }
+
+  return false;
+}
+
 bool c_Memcache::t_replace(CStrRef key, CVarRef var, int flag /*= 0*/,
                            int expire /*= 0*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::replace);
@@ -302,6 +325,11 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/) {
     return retval;
   }
   return false;
+}
+
+Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*/, VRefParam cas /*= null*/) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::get2);
+  throw NotImplementedException(__func__);
 }
 
 bool c_Memcache::t_delete(CStrRef key, int expire /*= 0*/) {
@@ -594,6 +622,13 @@ bool f_memcache_set(CObjRef memcache, CStrRef key, CVarRef var,
                     int flag /* = 0 */, int expire /* = 0 */) {
   c_Memcache *memcache_obj = memcache.getTyped<c_Memcache>();
   return memcache_obj->t_set(key, var, flag, expire);
+}
+
+bool f_memcache_cas(CObjRef memcache, CStrRef key, CVarRef var,
+                    int flag /* = 0 */, int expire /* = 0 */,
+                    int64 cas /* = 0 */) {
+  c_Memcache *memcache_obj = memcache.getTyped<c_Memcache>();
+  return memcache_obj->t_cas(key, var, flag, expire, cas);
 }
 
 bool f_memcache_replace(CObjRef memcache, CStrRef key, CVarRef var,
