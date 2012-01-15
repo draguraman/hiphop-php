@@ -329,7 +329,133 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/) {
 
 Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*/, VRefParam cas /*= null*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::get2);
-  throw NotImplementedException(__func__);
+  TAINT_OBSERVER(TAINT_BIT_ALL, TAINT_BIT_NONE);
+  if (key.is(KindOfArray)) {
+    std::vector<const char *> real_keys;
+    std::vector<size_t> key_len;
+    Array keyArr = key.toArray();
+
+    real_keys.reserve(keyArr.size());
+    key_len.reserve(keyArr.size());
+
+    for (ArrayIter iter(keyArr); iter; ++iter) {
+      real_keys.push_back(const_cast<char *>(iter.second().toString().c_str()));
+      key_len.push_back(iter.second().toString().length());
+    }
+
+    if (!real_keys.empty()) {
+      const char *payload = NULL;
+      size_t payload_len = 0;
+      uint32_t flag = 0;
+      const char *res_key = NULL;
+      size_t res_key_len = 0;
+
+      memcached_result_st result;
+
+      memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 
+          cas.isReferenced() ? 1 : 0);
+
+      memcached_return_t status = memcached_mget(&m_memcache, &real_keys[0],
+                                              &key_len[0], real_keys.size());
+      memcached_result_create(&m_memcache, &result);
+      Array return_val;
+
+      Array var_array, flags_array, cas_array;
+
+      while ((memcached_fetch_result(&m_memcache, &result, &status)) != NULL) {
+        res_key     = memcached_result_key_value(&result);
+        res_key_len = memcached_result_key_length(&result);
+
+        String skey = String(res_key, res_key_len, CopyString);
+
+        if (status == MEMCACHED_END) status = MEMCACHED_NOTFOUND;
+
+        if (status != MEMCACHED_SUCCESS) {
+          return_val.set(String(res_key, res_key_len, CopyString), status == MEMCACHED_NOTFOUND);
+          continue;
+        }
+
+        payload     = memcached_result_value(&result);
+        payload_len = memcached_result_length(&result);
+        flag        = memcached_result_flags(&result);
+
+        var = memcache_fetch_from_storage(payload, payload_len, flag);
+
+        free((void*)payload);
+
+        var_array.set(skey, var);
+
+        flags_array.set(skey, (int)flag);
+
+        if(cas.isReferenced()) {
+          cas_array.set(skey, (int64)memcached_result_cas(&result));
+        }
+        return_val.set(skey, status == MEMCACHED_SUCCESS);
+      }
+
+      memcached_result_free(&result);
+
+      flags = flags_array;
+      var = var_array;
+      cas = cas_array;
+
+      return return_val;
+    }
+  } else {
+    const char *payload = NULL;
+    size_t payload_len = 0;
+    uint32_t flag = 0;
+
+    memcached_return_t ret, status;
+    memcached_result_st value;
+    String skey = key.toString();
+    const char *ckey = skey.c_str();
+    size_t ckeylen = skey.length();
+
+    if (skey.length() == 0) {
+      return false;
+    }
+
+    memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 
+                            cas.isReferenced() ? 1 : 0);
+
+    ret = memcached_mget(&m_memcache, &ckey, &ckeylen, 1);
+
+    (void)(ret); /* make the compiler happy, but do nothing */
+    
+    memcached_result_create(&m_memcache, &value);
+
+    if (!memcached_fetch_result(&m_memcache, &value, &status)) {
+      /* This is for historical reasons from libmemcached*/
+      if (status == MEMCACHED_END) status = MEMCACHED_NOTFOUND;
+      if (status != MEMCACHED_SUCCESS) {
+        if(cas.isReferenced()) cas = (int64) 0;
+        return (status == MEMCACHED_NOTFOUND); /* get2 returns TRUE on key miss, but false on server fail */
+      }
+    }
+
+    payload = memcached_result_value(&value);
+    payload_len = memcached_result_length(&value);
+    flag = memcached_result_flags(&value);
+
+    if (flags.isReferenced()) {
+      flags = (int)flag;
+    }
+
+    if (cas.isReferenced()) {
+      cas = (int64) memcached_result_cas(&value);
+    }
+
+    var = memcache_fetch_from_storage(payload, payload_len, flag);
+
+    free((void*)payload);
+
+    memcached_result_free(&value);
+
+    return true;
+  }
+
+  return false;
 }
 
 bool c_Memcache::t_delete(CStrRef key, int expire /*= 0*/) {
