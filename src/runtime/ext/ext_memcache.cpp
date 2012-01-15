@@ -360,6 +360,12 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
       memcached_result_create(&m_memcache, &result);
       Array return_val;
 
+      /* init return value */
+      for (ArrayIter iter(keyArr); iter; ++iter) {
+        return_val.set(iter.second().toString(), false);
+      }
+	
+
       Array var_array, flags_array, cas_array;
 
       while ((memcached_fetch_result(&m_memcache, &result, &status)) != NULL) {
