@@ -136,6 +136,7 @@ static c_SimpleXMLElement *create_element(CObjRef doc, xmlNodePtr node,
   if (node) {
     elem->m_children = create_children(doc, node, ns, is_prefix);
     elem->m_attributes = collect_attributes(node, ns, is_prefix);
+    elem->__populate_m_array();
   }
   return elem;
 }
@@ -273,12 +274,30 @@ c_SimpleXMLElement::c_SimpleXMLElement(const ObjectStaticCallbacks *cb) :
       m_xpath(NULL) {
   setAttribute(HasLval);
   m_children = Array::Create();
+  m_array = Array::Create();
 }
 
 c_SimpleXMLElement::~c_SimpleXMLElement() {
   if (m_xpath) {
     xmlXPathFreeContext(m_xpath);
   }
+}
+
+void c_SimpleXMLElement::__populate_m_array() {
+      for (ArrayIter iter(m_children.toArray()); iter; ++iter) {
+      	if (iter.second().isObject()) {
+        	c_SimpleXMLElement *elem = iter.second().toObject().
+          	getTyped<c_SimpleXMLElement>();
+		//in array rep'n the text elements are not objects
+		if (elem->m_is_text && elem->m_attributes.toArray().empty()) {
+			m_array.set(iter.first(),elem->m_children[0]);
+		} else {
+			m_array.set(iter.first(),iter.second());
+		}
+	} else {
+		m_array.set(iter.first(), iter.second());
+	}
+      }
 }
 
 void c_SimpleXMLElement::t___construct(CStrRef data, int64 options /* = 0 */,
@@ -303,6 +322,7 @@ void c_SimpleXMLElement::t___construct(CStrRef data, int64 options /* = 0 */,
     if (m_node) {
       m_children = create_children(m_doc, m_node, ns, is_prefix);
       m_attributes = collect_attributes(m_node, ns, is_prefix);
+      __populate_m_array();
     }
   } else {
     throw Object(SystemLib::AllocExceptionObject(
@@ -536,6 +556,9 @@ Object c_SimpleXMLElement::t_attributes(CStrRef ns /* = "" */,
       elem->m_attributes = collect_attributes(m_node, ns, is_prefix);
     } else {
       elem->m_attributes.assignRef(m_attributes);
+    }
+    for (ArrayIter iter(elem->m_attributes) ; iter; ++iter) {
+        elem->m_children.set(iter.first(), iter.second());
     }
     elem->m_children.set("@attributes", elem->m_attributes);
   }
@@ -825,6 +848,9 @@ Variant c_SimpleXMLElement::t___set(Variant name, Variant value) {
 
   return null;
 }
+void c_SimpleXMLElement::__attach_attributes() {
+     m_children.set("@attributes",m_attributes);
+}
 
 bool c_SimpleXMLElement::o_toBoolean() const {
   return m_node != NULL || o_properties.size();
@@ -850,11 +876,11 @@ double c_SimpleXMLElement::o_toDouble() const {
 
 Array c_SimpleXMLElement::o_toArray() const {
   if (m_attributes.toArray().empty()) {
-    return m_children;
+    return m_array;
   }
   Array ret;
   ret.set("@attributes", m_attributes);
-  ret += m_children;
+  ret += m_array;
   return ret;
 }
 

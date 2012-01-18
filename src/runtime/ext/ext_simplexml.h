@@ -95,6 +95,7 @@ class c_SimpleXMLElement :
   DECLARE_METHOD_INVOKE_HELPERS(__unset);
   public: Variant t___destruct();
   DECLARE_METHOD_INVOKE_HELPERS(__destruct);
+  public: void __attach_attributes();
 
   // implemented by HPHP
   public: c_SimpleXMLElement *create(String data, int64 options = 0, bool data_is_url = false, String ns = "", bool is_prefix = false);
@@ -105,6 +106,7 @@ class c_SimpleXMLElement :
   xmlNodePtr m_node;
   Variant m_children;
   Variant m_attributes;
+  Array m_array;
   bool m_is_text;
   bool m_free_text;
   bool m_is_attribute;
@@ -117,6 +119,8 @@ class c_SimpleXMLElement :
   virtual Variant *___lval(Variant v_name);
  private:
   xmlXPathContextPtr m_xpath;
+ public:
+  void __populate_m_array();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
