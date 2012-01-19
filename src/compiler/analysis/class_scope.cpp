@@ -2371,7 +2371,10 @@ string ClassScope::getBaseHeaderFilename() {
 }
 
 string ClassScope::getHeaderFilename() {
-  return getBaseHeaderFilename() + ".h";
+  std::string::iterator beg;
+  std::string total = getBaseHeaderFilename() + ".h";
+  total.replace(total.find("$$"),2,"__");
+  return total;
 }
 
 void ClassScope::outputCPPHeader(AnalysisResultPtr ar,
