@@ -72,8 +72,10 @@ Variant getDynamicConstant(CVarRef v, CStrRef name) {
 }
 
 Variant getUndefinedConstant(CStrRef name) {
-  CVarRef v = ((Globals *)get_global_variables())->getConstant(name.c_str());
-  if (isInitialized(v)) return v;
+  if (((Globals *)get_global_variables())->defined(name)) {
+    CVarRef v = ((Globals *)get_global_variables())->getConstant(name);
+    if (isInitialized(v)) return v;
+  }
   raise_notice("Use of undefined constant %s - assumed '%s'",
                name.c_str(), name.c_str());
   return name;
