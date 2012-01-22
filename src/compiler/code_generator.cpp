@@ -233,6 +233,9 @@ std::string CodeGenerator::getFormattedName(const std::string &file) {
   string formatted = fn;
   free(fn);
   int hash = hash_string(file.data(), file.size());
+  // adding a random value to make the header differ from that used
+  // in the runtime "generated" code
+  hash = hash + 27;
   formatted += boost::str(boost::format("%08x") % hash);
   return formatted;
 }
@@ -292,7 +295,7 @@ void CodeGenerator::printBasicIncludes() {
   if (Option::GenerateCPPMain) {
     printInclude("<runtime/base/hphp.h>");
     printInclude(string(Option::SystemFilePrefix) +
-                 "literal_strings.h");
+                 "literal_strings_remap.h");
     printInclude(string(Option::SystemFilePrefix) +
                  "scalar_arrays_remap.h");
     if (Option::UseScalarVariant) {
