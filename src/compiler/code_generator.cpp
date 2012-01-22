@@ -292,7 +292,7 @@ void CodeGenerator::printBasicIncludes() {
   if (Option::GenerateCPPMain) {
     printInclude("<runtime/base/hphp.h>");
     printInclude(string(Option::SystemFilePrefix) +
-                 "literal_strings_remap.h");
+                 "literal_strings.h");
     printInclude(string(Option::SystemFilePrefix) +
                  "scalar_arrays_remap.h");
     if (Option::UseScalarVariant) {

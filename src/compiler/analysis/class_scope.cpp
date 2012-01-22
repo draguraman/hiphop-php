@@ -2373,7 +2373,9 @@ string ClassScope::getBaseHeaderFilename() {
 string ClassScope::getHeaderFilename() {
   std::string::iterator beg;
   std::string total = getBaseHeaderFilename() + ".h";
-  total.replace(total.find("$$"),2,"__");
+  if (total.find("$$")!=std::string::npos) {
+    total.replace(total.find("$$"),2,"___");
+  }
   return total;
 }
 

@@ -432,8 +432,9 @@ void StaticMemberExpression::outputCPPImpl(CodeGenerator &cg,
     ScalarExpressionPtr var = dynamic_pointer_cast<ScalarExpression>(m_exp);
     string clsId = m_resolvedClass->getId();
     if (m_resolvedClass->needLazyStaticInitializer()) {
-      cg_printf("%s%s->lazy_initializer(g)->%s%s%s%s",
+      cg_printf("%s%s%s->lazy_initializer(g)->%s%s%s%s",
                 Option::ClassStaticsCallbackPrefix, clsId.c_str(),
+		m_resolvedClass->isRedeclaring() ? ".oscb" : "",
                 Option::StaticPropertyPrefix, clsId.c_str(),
                 Option::IdPrefix.c_str(),
                 CodeGenerator::FormatLabel(var->getString()).c_str());

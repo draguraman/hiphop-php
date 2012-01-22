@@ -259,7 +259,7 @@ TypePtr ConstantExpression::inferTypes(AnalysisResultPtr ar, TypePtr type,
         m_valid = true;
       }
     }
-    if ((Option::DynamicConstants || (!m_dynamic && isDynamic))&&!(ar->isSystemConstant(m_name) || value)) {
+    if ((Option::DynamicConstants || (!m_dynamic && isDynamic))&&!(ar->isSystemConstant(m_name))) {
       m_dynamic = true;
       actualType = Type::Variant;
     }
