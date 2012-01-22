@@ -387,8 +387,6 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 
         var = memcache_fetch_from_storage(payload, payload_len, flag);
 
-        free((void*)payload);
-
         var_array.set(skey, var);
 
         flags_array.set(skey, (int)flag);
@@ -453,8 +451,6 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
     }
 
     var = memcache_fetch_from_storage(payload, payload_len, flag);
-
-    free((void*)payload);
 
     memcached_result_free(&value);
 
