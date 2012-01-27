@@ -61,6 +61,7 @@ public:
                            const char *vhost);
   static void SetThreadMode(ThreadMode mode);
   static void ReportStatus(std::string &out, Format format);
+  static void ReportScorecard(int& busyWorkers, int& idleWorkers, std::string &scorecard);
 
   // io status functions
   static void SetThreadIOStatusAddress(const char *name);

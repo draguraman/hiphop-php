@@ -63,6 +63,14 @@ private:
   }
 };
 
+// Implementations with support of mod_status (server-status) scoreboard
+class HttpRequestHandlerWithStats : public HttpRequestHandler {
+
+public:
+  // implementing RequestHandler
+  virtual void handleRequest(Transport *transport);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 }
 
