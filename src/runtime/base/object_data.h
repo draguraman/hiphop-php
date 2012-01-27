@@ -230,7 +230,7 @@ class ObjectData : public CountableNF {
    * This is used for deciding what property_exists() returns and whether or
    * not this property should be part of an iteration in foreach ($obj as ...)
    */
-  bool o_propExists(CStrRef s, CStrRef context = null_string);
+  virtual bool o_propExists(CStrRef s, CStrRef context = null_string);
 
   static Object FromArray(ArrayData *properties);
 
