@@ -117,10 +117,12 @@ class c_SimpleXMLElement :
   virtual double o_toDouble() const;
   virtual Array o_toArray() const;
   virtual Variant *___lval(Variant v_name);
+  virtual bool o_propExists(CStrRef s, CStrRef context = null_string);
+
  private:
   xmlXPathContextPtr m_xpath;
  public:
-  void __populate_m_array();
+  Array __populate_m_array();
 };
 
 ///////////////////////////////////////////////////////////////////////////////

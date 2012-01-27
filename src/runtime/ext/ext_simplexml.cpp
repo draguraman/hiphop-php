@@ -90,7 +90,7 @@ static Array collect_attributes(xmlNodePtr node, CStrRef ns, bool is_prefix) {
   return attributes;
 }
 
-static void add_property(Array &properties, xmlNodePtr node, Object value) {
+static void add_property(Array &properties, xmlNodePtr node, Object value, bool append = false) {
   const char *name = (char *)node->name;
   if (name) {
     int namelen = xmlStrlen(node->name);
@@ -106,10 +106,26 @@ static void add_property(Array &properties, xmlNodePtr node, Object value) {
         newdata.append(value);
         properties.set(sname, newdata);
       }
+    } else if(append) {
+    	properties.set(0, value);
     } else {
       properties.set(sname, value);
     }
   }
+}
+
+static bool isSpaceString(xmlNodePtr node, xmlChar *content) {
+
+	if(node->next && node->next->type == XML_ELEMENT_NODE)
+		return false;
+	char *str = strdup((char *)content);
+	int len = strlen(str);
+
+	for (int i=0; i < len; i++) {
+		if(!isspace(str[i]))
+			return false;
+	}
+	return true;
 }
 
 static c_SimpleXMLElement *create_text(CObjRef doc, xmlNodePtr node,
@@ -156,7 +172,7 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
           add_property
             (properties, root,
              create_text(doc, node, node_list_to_string(root->doc, node),
-                         ns, is_prefix, true));
+                         ns, is_prefix, true), isSpaceString(node, node->content));
         }
         continue;
       }
@@ -283,7 +299,7 @@ c_SimpleXMLElement::~c_SimpleXMLElement() {
   }
 }
 
-void c_SimpleXMLElement::__populate_m_array() {
+Array c_SimpleXMLElement::__populate_m_array() {
       for (ArrayIter iter(m_children.toArray()); iter; ++iter) {
       	if (iter.second().isObject()) {
         	c_SimpleXMLElement *elem = iter.second().toObject().
@@ -295,9 +311,10 @@ void c_SimpleXMLElement::__populate_m_array() {
 			m_array.set(iter.first(),iter.second());
 		}
 	} else {
-		m_array.set(iter.first(), iter.second());
+		m_array.set(iter.first(),iter.second()); 
 	}
       }
+      return m_array;
 }
 
 void c_SimpleXMLElement::t___construct(CStrRef data, int64 options /* = 0 */,
@@ -715,6 +732,7 @@ Variant c_SimpleXMLElement::t___get(Variant name) {
     e->m_node = elem->m_node;
     e->m_children.assignRef(elem->m_children);
     e->m_attributes.assignRef(elem->m_attributes);
+    e->m_array = elem->m_array;
     e->m_is_text = elem->m_is_text;
     e->m_is_property = true;
     return e;
@@ -1278,6 +1296,15 @@ void f_libxml_set_streams_context(CObjRef streams_context) {
 bool f_libxml_disable_entity_loader(bool disable /* = true */) {
   throw NotImplementedException(__func__);
 }
+
+/////////////////////////////////////////////////////////////////////////
+////// prop_exists
+bool c_SimpleXMLElement::o_propExists(CStrRef s, CStrRef context /* = null_string */) {
+  if (m_children.toArray().exists(s)) {
+    return true;
+  } 
+   return false;
+} 
 
 ///////////////////////////////////////////////////////////////////////////////
 }
