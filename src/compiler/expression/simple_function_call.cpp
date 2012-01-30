@@ -780,15 +780,23 @@ ExpressionPtr SimpleFunctionCall::preOptimize(AnalysisResultConstPtr ar) {
             }
             ConstantTableConstPtr constants = ar->getConstants();
             // system constant
-            if (constants->isPresent(symbol) && !constants->isDynamic(symbol)) {
-              return CONSTANT("true");
-            }
+            if (constants->isPresent(symbol)) {
+	      if (!constants->isDynamic(symbol)) {
+                  return CONSTANT("true");
+              } else {
+                return ExpressionPtr();
+	      }
+	    }
             // user constant
             BlockScopeConstPtr block = ar->findConstantDeclarer(symbol);
             // not found (i.e., undefined)
             if (!block) {
               if (symbol.find("::") == std::string::npos) {
-                return CONSTANT("false");
+		if (Option::DynamicConstants) {
+			return ExpressionPtr();
+		} else {
+			return CONSTANT("false");
+		}
               } else {
                 // e.g., defined("self::ZERO")
                 return ExpressionPtr();
