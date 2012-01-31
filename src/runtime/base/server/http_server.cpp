@@ -63,7 +63,7 @@ HttpServer::HttpServer(void *sslCTX /* = NULL */)
 
   if (RuntimeOption::ServerPortFd != -1 || RuntimeOption::SSLPortFd != -1) {
     LibEventServerWithFd* server =
-      (new TypedServer<LibEventServerWithFd, HttpRequestHandler>
+      (new TypedServer<LibEventServerWithFd, HttpRequestHandlerWithStats>
        (RuntimeOption::ServerIP, RuntimeOption::ServerPort,
         RuntimeOption::ServerThreadCount,
         RuntimeOption::RequestTimeoutSeconds));
@@ -72,13 +72,13 @@ HttpServer::HttpServer(void *sslCTX /* = NULL */)
     m_pageServer = ServerPtr(server);
   } else if (RuntimeOption::TakeoverFilename.empty()) {
     m_pageServer = ServerPtr
-      (new TypedServer<LibEventServer, HttpRequestHandler>
+      (new TypedServer<LibEventServer, HttpRequestHandlerWithStats>
        (RuntimeOption::ServerIP, RuntimeOption::ServerPort,
         RuntimeOption::ServerThreadCount,
         RuntimeOption::RequestTimeoutSeconds));
   } else {
     LibEventServerWithTakeover* server =
-      (new TypedServer<LibEventServerWithTakeover, HttpRequestHandler>
+      (new TypedServer<LibEventServerWithTakeover, HttpRequestHandlerWithStats>
        (RuntimeOption::ServerIP, RuntimeOption::ServerPort,
         RuntimeOption::ServerThreadCount,
         RuntimeOption::RequestTimeoutSeconds));

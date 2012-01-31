@@ -15,6 +15,7 @@
 */
 
 #include <runtime/base/server/server_stats.h>
+#include <runtime/base/server/server_scoreboard.h>
 #include <runtime/base/server/http_server.h>
 #include <runtime/base/runtime_option.h>
 #include <runtime/base/memory/memory_manager.h>
@@ -612,6 +613,10 @@ void ServerStats::Log(const string &name, int64 value) {
 }
 
 void ServerStats::LogBytes(int64 bytes) {
+  if( RuntimeOption::EnableScoreboard ) {
+    ServerScoreboard::LogAccess(bytes);
+  }
+
   if (RuntimeOption::EnableStats && RuntimeOption::EnableWebStats) {
     ServerStats::s_logger->logBytes(bytes);
   }
@@ -912,6 +917,41 @@ void ServerStats::ReportStatus(std::string &output, Format format) {
 
   delete w;
   output = out.str();
+}
+
+void ServerStats::ReportScorecard(int& busyWorkers, int& idleWorkers,
+		std::string &scorecard) {
+	busyWorkers = idleWorkers = 0;
+	scorecard.clear();
+
+	Lock lock(s_lock, false);
+	for (unsigned int i = 0; i < s_loggers.size(); i++) {
+		ThreadStatus &ts = s_loggers[i]->m_threadStatus;
+
+		char mode = '_';
+		switch (ts.m_mode) {
+		case Idling:
+			mode = '_';
+			idleWorkers++;
+			break;
+		case Processing:
+			mode = 'R';
+			break;
+		case Writing:
+			mode = 'W';
+			break;
+		case PostProcessing:
+			mode = 'G';
+			break;
+		default:
+			ASSERT(false);
+			break;
+		}
+
+		scorecard.push_back(mode);
+	}
+
+	busyWorkers = s_loggers.size() - idleWorkers;
 }
 
 void ServerStats::StartNetworkProfile() {

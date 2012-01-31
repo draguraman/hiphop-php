@@ -275,6 +275,8 @@ public:
   static int32 ProfilerTraceBuffer;
   static double ProfilerTraceExpansion;
   static int32 ProfilerMaxTraceBuffer;
+  static bool EnableScoreboard;
+  static std::string ScoreboardURI;
 
   static int64 MaxRSS;
   static int64 MaxRSSPollingCycle;
