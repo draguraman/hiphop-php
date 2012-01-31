@@ -62,8 +62,8 @@ void ServerScoreboard::Report(std::string &out) {
 
 	char buff[4096];
 	sprintf(buff,
-	  "Total Accesses: %ld\n"
-	  "Total kBytes: %ld\n"
+	  "Total Accesses: %Ld\n"
+	  "Total kBytes: %Ld\n"
 	  "CPULoad: %f\n"
 	  "Uptime: %ld\n"
 	  "ReqPerSec: %f\n"
