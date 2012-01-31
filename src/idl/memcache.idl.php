@@ -203,6 +203,50 @@ DefineFunction(
 
 DefineFunction(
   array(
+    'name'   => "memcache_cas",
+    'desc'   => "Memcache::cas() stores an item var with key on the memcached server. Parameter expire is expiration time in seconds. If it's 0, the item never expires (but memcached server doesn't guarantee this item to be stored all the time, it could be deleted from the cache to make place for other items). You can use MEMCACHE_COMPRESSED constant as flag value if you want to use on-the-fly compression (uses zlib).\n\nRemember that resource variables (i.e. file and connection descriptors) cannot be stored in the cache, because they cannot be adequately represented in serialized state. Also you can use memcache_set() function.",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "memcache",
+        'type'   => Object,
+        'desc'   => "The key that will be associated with the item.",
+      ),
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The variable to store. Strings and integers are stored as is, other types are stored serialized.",
+      ),
+      array(
+        'name'   => "var",
+        'type'   => Variant,
+        'desc'   => "Use MEMCACHE_COMPRESSED to store the item compressed (uses zlib).",
+      ),
+      array(
+        'name'   => "flag",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Expiration time of the item. If it's equal to zero, the item will never expire. You can also use Unix timestamp or a number of seconds starting from current time, but in the latter case the number of seconds may not exceed 2592000 (30 days).",
+      ),
+      array(
+        'name'   => "expire",
+        'type'   => Int32,
+        'value'  => "0",
+      ),
+      array(
+        'name'   => "cas",
+        'type'   => Int64,
+        'value'  => "0",
+      ),
+    ),
+  ));
+
+DefineFunction(
+  array(
     'name'   => "memcache_replace",
     'desc'   => "Memcache::replace() should be used to replace value of existing item with key. In case if item with such key doesn't exists, Memcache::replace() returns FALSE. For the rest Memcache::replace() behaves similarly to Memcache::set(). Also you can use memcache_replace() function.",
     'flags'  =>  HasDocComment,
@@ -877,6 +921,47 @@ DefineFunction(
 
 DefineFunction(
   array(
+    'name'   => "cas",
+    'desc'   => "Memcache::cas() stores an item var with key on the memcached server. Parameter expire is expiration time in seconds. If it's 0, the item never expires (but memcached server doesn't guarantee this item to be stored all the time, it could be deleted from the cache to make place for other items). You can use MEMCACHE_COMPRESSED constant as flag value if you want to use on-the-fly compression (uses zlib).\n\nRemember that resource variables (i.e. file and connection descriptors) cannot be stored in the cache, because they cannot be adequately represented in serialized state. Also you can use memcache_set() function.",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The key that will be associated with the item.",
+      ),
+      array(
+        'name'   => "var",
+        'type'   => Variant,
+        'desc'   => "The variable to store. Strings and integers are stored as is, other types are stored serialized.",
+      ),
+      array(
+        'name'   => "flag",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Use MEMCACHE_COMPRESSED to store the item compressed (uses zlib).",
+      ),
+      array(
+        'name'   => "expire",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Expiration time of the item. If it's equal to zero, the item will never expire. You can also use Unix timestamp or a number of seconds starting from current time, but in the latter case the number of seconds may not exceed 2592000 (30 days).",
+      ),
+      array(
+        'name'   => "cas",
+        'type'   => Int64,
+        'value'  => "0",
+        'desc'   => "Cas value" 
+      ),
+    ),
+  ));
+
+DefineFunction(
+  array(
     'name'   => "replace",
     'desc'   => "Memcache::replace() should be used to replace value of existing item with key. In case if item with such key doesn't exists, Memcache::replace() returns FALSE. For the rest Memcache::replace() behaves similarly to Memcache::set(). Also you can use memcache_replace() function.",
     'flags'  =>  HasDocComment,
@@ -935,6 +1020,41 @@ DefineFunction(
     'taint_observer' => array(
       'set_mask'   => "TAINT_BIT_ALL",
       'clear_mask' => "TAINT_BIT_NONE",
+    ),
+  ));
+
+DefineFunction(
+  array(
+    'name'   => "get2",
+    'desc'   => "Memcache::get2() for zynga",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Variant,
+      'desc'   => "Returns the status or array of statuses (false only for server failures).",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => Variant,
+        'desc'   => "The key or array of keys to fetch.",
+      ),
+      array(
+        'name'   => "val",
+        'type'   => Variant | Reference,
+        'desc'   => "The ref to store value to.",
+      ),
+      array(
+        'name'   => "flags",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, flags fetched along with the values will be written to this parameter. These flags are the same as the ones given to for example Memcache::set(). The lowest byte of the int is reserved for pecl/memcache internal usage (e.g. to indicate compression and serialization status).",
+      ),
+      array(
+        'name'   => "cas",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
+      ),
     ),
   ));
 

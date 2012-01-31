@@ -45,6 +45,11 @@ inline bool x_memcache_set(CObjRef memcache, CStrRef key, CVarRef var, int flag 
   return f_memcache_set(memcache, key, var, flag, expire);
 }
 
+inline bool x_memcache_cas(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0, int64 cas = 0) {
+  FUNCTION_INJECTION_BUILTIN(memcache_cas);
+  return f_memcache_cas(memcache, key, var, flag, expire, cas);
+}
+
 inline bool x_memcache_replace(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0) {
   FUNCTION_INJECTION_BUILTIN(memcache_replace);
   return f_memcache_replace(memcache, key, var, flag, expire);
