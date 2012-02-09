@@ -399,6 +399,22 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 
       memcached_result_free(&result);
 
+      /* Process missing keys */
+      std::vector<char> key_server_stats;
+      key_server_stats.reserve(keyArr.size() * sizeof(bool));
+      bool* statBuf = (bool*)&key_server_stats[0];
+      memcached_check_servers_by_keys(&m_memcache, NULL, 0,
+    		  &real_keys[0], &key_len[0], real_keys.size(), statBuf);
+
+      int i = 0;
+      for (ArrayIter iter(keyArr); iter; ++iter) {
+    	const char *key = iter.second().toString().c_str();
+    	if( !var_array.exists(key) ) {
+          return_val.set(key, statBuf[i]);
+    	}
+    	i++;
+      }
+
       flags = flags_array;
       var = var_array;
       cas = cas_array;
