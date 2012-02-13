@@ -121,7 +121,6 @@ void HttpRequestHandler::handleRequest(Transport *transport) {
   // will clear all extra logging when this function goes out of scope
   StackTraceNoHeap::ExtraLoggingClearer clearer;
   StackTraceNoHeap::AddExtraLogging("URL", transport->getUrl());
-
   // resolve virtual host
   const VirtualHost *vhost = HttpProtocol::GetVirtualHost(transport);
   ASSERT(vhost);

@@ -1532,12 +1532,38 @@ void VariableTable::outputCPPVariableTable(CodeGenerator &cg,
                                            AnalysisResultPtr ar,
                                            const char *paramPrefix) {
   bool inGlobalScope = isGlobalTable(ar);
-
+  bool addThis = false;
   string varDecl, initializer, memDecl, params;
+  {
+  Symbol *sym = getSymbol("this");
+  if (getClassScope() && (!sym || !(sym->declarationSet()))) {
+      addThis = true;
+      if (!sym) {
+          sym = addSymbol("this");
+      }
+      m_symbolVec.push_back(sym);
+  }
+  }
   for (unsigned int i = 0; i < m_symbolVec.size(); i++) {
     const Symbol *sym = m_symbolVec[i];
-    if (sym->isHidden()) continue;
     const string &name = sym->getName();
+    if (addThis) {
+	if (name == "this") {
+    	    if (i != 0) {
+    		varDecl += ", ";
+    		initializer += ", ";
+    		memDecl += "; ";
+    		params += ", ";
+    	    }
+
+	    varDecl += "Variant &r_this";
+	    initializer += "v_this(r_this)";
+	    memDecl += "\nVariant &v_this";
+	    params += "Variant(GET_THIS()).getRef()";
+	    continue;
+	}
+    }
+    if (sym->isHidden()) {  continue; }
     string varName = string(getVariablePrefix(sym)) +
       CodeGenerator::FormatLabel(name);
     TypePtr type = sym->getFinalType();
@@ -1580,6 +1606,13 @@ void VariableTable::outputCPPVariableTable(CodeGenerator &cg,
                             JumpReturnString)) {
       m_emptyJumpTables.insert(JumpTableLocalGetImpl);
     }
+
+    if (addThis) {
+    cg_printf("if (s == \"this\") {\n");
+    cg_indentBegin("return v_this;\n");
+    cg_indentEnd("}\n");
+    }
+
     cg_printf("return LVariableTable::getImpl(s);\n");
     cg_indentEnd("}\n");
 
