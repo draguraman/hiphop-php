@@ -31,6 +31,7 @@
 #include <runtime/base/server/http_protocol.h>
 #include <runtime/base/time/datetime.h>
 #include <runtime/eval/debugger/debugger.h>
+#include <runtime/base/server/server_scoreboard.h>
 
 using namespace std;
 
@@ -406,6 +407,24 @@ bool HttpRequestHandler::MatchAnyPattern
     if (ret.toInt64() > 0) return true;
   }
   return false;
+}
+
+void HttpRequestHandlerWithStats::handleRequest(Transport *transport) {
+
+	  string cmd = transport->getCommand();
+	  if( RuntimeOption::EnableScoreboard && cmd == RuntimeOption::ScoreboardURI ) {
+		  GetAccessLog().onNewRequest();
+
+		  string scorecard;
+		  ServerScoreboard::Report(scorecard);
+
+		  transport->sendString(scorecard);
+
+		  GetAccessLog().log(transport, NULL);
+	  }
+	  else {
+		  HttpRequestHandler::handleRequest(transport);
+	  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

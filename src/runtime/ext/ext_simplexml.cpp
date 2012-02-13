@@ -249,7 +249,7 @@ Variant f_simplexml_load_string(CStrRef data,
                                 int64 options /* = 0 */,
                                 CStrRef ns /* = "" */,
                                 bool is_prefix /* = false */) {
-  if (!class_name->isame(s_SimpleXMLElement.get())&&!class_name.empty()) {
+  if (!class_name->isame(s_SimpleXMLElement.get())&& !class_name.empty()) {
     if (class_name.empty()) {
       throw_invalid_argument("class_name: [empty]");
     }

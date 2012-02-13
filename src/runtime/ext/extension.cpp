@@ -50,7 +50,7 @@ Extension::Extension(litstr name, const char *version /* = "" */)
 }
 
 void Extension::LoadModules(Hdf hdf) {
-  ASSERT(s_registered_extensions);
+  //ASSERT(s_registered_extensions);
   if (s_registered_extensions == NULL) {
     s_registered_extensions = new ExtensionMap();
   }
