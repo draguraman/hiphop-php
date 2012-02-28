@@ -128,13 +128,16 @@ static bool isSpaceString(xmlNodePtr node, xmlChar *content) {
 	return true;
 }
 
+static int Debug_Node_Creation=0;
 static c_SimpleXMLElement *create_text(CObjRef doc, xmlNodePtr node,
                                        CStrRef value, CStrRef ns,
                                        bool is_prefix, bool free_text) {
+    if(Debug_Node_Creation) std::cout<<"Creating  text node:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
   c_SimpleXMLElement *elem = NEWOBJ(c_SimpleXMLElement)();
   elem->m_doc = doc;
   elem->m_node = node->parent; // assign to parent, not node
   elem->m_children.set(0, value);
+  elem->m_array.set(0,value);
   elem->m_is_text = true;
   elem->m_free_text = free_text;
   elem->m_attributes = collect_attributes(node->parent, ns, is_prefix);
@@ -150,6 +153,7 @@ static c_SimpleXMLElement *create_element(CObjRef doc, xmlNodePtr node,
   elem->m_doc = doc;
   elem->m_node = node;
   if (node) {
+	if(Debug_Node_Creation) std::cout<<"Creating  Element:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
     elem->m_children = create_children(doc, node, ns, is_prefix);
     elem->m_attributes = collect_attributes(node, ns, is_prefix);
     elem->__populate_m_array();
@@ -161,13 +165,14 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
                              CStrRef ns, bool is_prefix) {
   Array properties = Array::Create();
   for (xmlNodePtr node = root->children; node; node = node->next) {
+    if(Debug_Node_Creation) std::cout<<"Creating Children:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
     if (node->children || node->prev || node->next) {
-      if (node->type == XML_TEXT_NODE) {
+      if (node->type == XML_TEXT_NODE && node->type != XML_CDATA_SECTION_NODE) {
         // bad node from parser, ignoring it...
         continue;
       }
     } else {
-      if (node->type == XML_TEXT_NODE) {
+      if (node->type == XML_TEXT_NODE || node->type == XML_CDATA_SECTION_NODE ) {
         if (node->content && *node->content) {
           add_property
             (properties, root,
@@ -244,7 +249,7 @@ Variant f_simplexml_load_string(CStrRef data,
                                 int64 options /* = 0 */,
                                 CStrRef ns /* = "" */,
                                 bool is_prefix /* = false */) {
-  if (!class_name->isame(s_SimpleXMLElement.get())) {
+  if (!class_name->isame(s_SimpleXMLElement.get())&& !class_name.empty()) {
     if (class_name.empty()) {
       throw_invalid_argument("class_name: [empty]");
     }
@@ -495,13 +500,55 @@ Array c_SimpleXMLElement::t_getdocnamespaces(bool recursive /* = false */) {
   return ret;
 }
 
+bool isComment(xmlNodePtr node) {
+
+	const char *name = (char *)node->name;
+	if (name) {
+		int namelen = xmlStrlen(node->name);
+		String sname(name, namelen, CopyString);
+
+		if(sname == "comment") return true;
+	}
+	return false;
+}
+
+Array removeComment(Variant m_children, CStrRef ns, bool is_prefix) {
+	Array props = Array::Create();	
+    for (ArrayIter iter(m_children); iter; ++iter) {
+      if (iter.second().isObject()) {
+        c_SimpleXMLElement *elem = iter.second().toObject().
+          getTyped<c_SimpleXMLElement>();
+        if (elem->m_node && match_ns(elem->m_node, ns, is_prefix) && !isComment(elem->m_node)) {
+          props.set(iter.first(), iter.second());
+        }
+      } else {
+        Array subnodes;
+        for (ArrayIter iter2(iter.second()); iter2; ++iter2) {
+          c_SimpleXMLElement *elem = iter2.second().toObject().
+            getTyped<c_SimpleXMLElement>();
+          if (elem->m_node && match_ns(elem->m_node, ns, is_prefix) && !isComment(elem->m_node)) {
+            subnodes.append(iter2.second());
+          }
+        }
+        if (!subnodes.empty()) {
+          if (subnodes.size() == 1) {
+            props.set(iter.first(), subnodes[0]);
+          } else {
+            props.set(iter.first(), subnodes);
+          }
+        }
+      }
+    }
+		return props;
+}
+
 Object c_SimpleXMLElement::t_children(CStrRef ns /* = "" */,
                                       bool is_prefix /* = false */) {
   INSTANCE_METHOD_INJECTION_BUILTIN(SimpleXMLElement, SimpleXMLElement::children);
+
   if (m_is_attribute) {
     return Object();
   }
-
   c_SimpleXMLElement *elem = NEWOBJ(c_SimpleXMLElement)();
   elem->m_doc = m_doc;
   elem->m_node = m_node;
@@ -509,7 +556,8 @@ Object c_SimpleXMLElement::t_children(CStrRef ns /* = "" */,
   elem->m_free_text = m_free_text;
   elem->m_is_children = true;
   if (ns.empty()) {
-    elem->m_children.assignRef(m_children);
+    //elem->m_children.assignRef(m_children);
+    elem->m_children = removeComment(m_children, ns, is_prefix);
   } else {
     Array props = Array::Create();
     for (ArrayIter iter(m_children); iter; ++iter) {

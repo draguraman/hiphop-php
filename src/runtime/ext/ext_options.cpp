@@ -772,7 +772,8 @@ int f_zend_thread_id() {
 }
 
 String f_zend_version() {
-  throw NotSupportedException(__func__, "not zend anymore");
+  return "2.2.0";
+  //throw NotSupportedException(__func__, "not zend anymore");
 }
 
 ///////////////////////////////////////////////////////////////////////////////

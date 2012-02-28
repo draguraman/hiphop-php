@@ -504,6 +504,28 @@ Variant f_parse_ini_file(CStrRef filename, bool process_sections /* = false */,
         }
       }
     }
+    if (!f_file_exists(translated)) {
+      //now try the IncludePaths configured in config file
+      for (unsigned int i = 0; i < RuntimeOption::IncludeSearchPaths.size(); i++) {
+	String path("");
+	String includePath = RuntimeOption::IncludeSearchPaths[i];
+	
+	path += includePath;
+	
+	if (path[path.size() - 1] != '/') {
+	  path += "/";
+	}
+	
+	path += filename;
+	String can_path(Util::canonicalize(path.c_str(), path.size()),
+			AttachString);
+	
+	if (f_file_exists(can_path)) {
+	  translated = can_path;
+	  break;
+	}
+      }
+    }
   }
   Variant content = f_file_get_contents(translated);
   if (same(content, false)) return false;

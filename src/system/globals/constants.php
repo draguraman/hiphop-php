@@ -2047,3 +2047,4 @@ define('XSD_UNSIGNEDLONG', 139);
 define('XSD_UNSIGNEDSHORT', 141);
 define('YESEXPR', 327680);
 define('ZEND_THREAD_SAFE', false);
+define('RUNNING_HIPHOP', true);

@@ -172,6 +172,11 @@ class Variant {
   void initForVarNR(DataType dt) { _count = NR_FLAG; m_type = dt; }
 
  public:
+  Variant &getRef() {
+     Variant &p = *this;
+     return p;
+  }
+
   bool isVarNR() const { return _count == NR_FLAG; }
   void setVarNR() const { _count = NR_FLAG; }
 

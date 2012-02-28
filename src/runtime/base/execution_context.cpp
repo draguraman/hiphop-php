@@ -239,7 +239,8 @@ void ExecutionContext::obProtect(bool on) {
 
 void ExecutionContext::obStart(CVarRef handler /* = null */) {
   OutputBuffer *ob = new OutputBuffer();
-  ob->handler = handler;
+  //FIXME right now we dont support output buffering handed off to a function
+  ob->handler = null /*handler*/;
   m_buffers.push_back(ob);
   resetCurrentBuffer();
 }

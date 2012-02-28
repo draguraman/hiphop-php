@@ -31,6 +31,7 @@
 #include <runtime/base/server/http_protocol.h>
 #include <runtime/base/time/datetime.h>
 #include <runtime/eval/debugger/debugger.h>
+#include <runtime/base/server/server_scoreboard.h>
 
 using namespace std;
 
@@ -121,7 +122,6 @@ void HttpRequestHandler::handleRequest(Transport *transport) {
   // will clear all extra logging when this function goes out of scope
   StackTraceNoHeap::ExtraLoggingClearer clearer;
   StackTraceNoHeap::AddExtraLogging("URL", transport->getUrl());
-
   // resolve virtual host
   const VirtualHost *vhost = HttpProtocol::GetVirtualHost(transport);
   ASSERT(vhost);
@@ -407,6 +407,24 @@ bool HttpRequestHandler::MatchAnyPattern
     if (ret.toInt64() > 0) return true;
   }
   return false;
+}
+
+void HttpRequestHandlerWithStats::handleRequest(Transport *transport) {
+
+	  string cmd = transport->getCommand();
+	  if( RuntimeOption::EnableScoreboard && cmd == RuntimeOption::ScoreboardURI ) {
+		  GetAccessLog().onNewRequest();
+
+		  string scorecard;
+		  ServerScoreboard::Report(scorecard);
+
+		  transport->sendString(scorecard);
+
+		  GetAccessLog().log(transport, NULL);
+	  }
+	  else {
+		  HttpRequestHandler::handleRequest(transport);
+	  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
