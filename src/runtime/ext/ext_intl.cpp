@@ -564,6 +564,37 @@ Variant c_Locale::t___destruct() {
   return null;
 }
 
+String c_Locale::ti_acceptfromhttp(const char* cls , CStrRef header) {
+  //http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+  //Accept-Language: en-ca,en;q=0.8,en-us;q=0.6,de-de;q=0.4,de;q=0.2
+  /*
+   * de_DE.xml en_UK.xml de.xml en.xml  en_US.xml es_ES.xml  fr_FR.xml  id_ID.xml  ja.xml pt_BR.xml  tr.xml
+   */
+
+  const char* s;
+  int i;
+
+  for(s = header.data(), i=0; i < header.size() && s[i] != ','; i++) {};
+  int itemEnd = i;
+
+  for(s = header.data(), i=0; i < itemEnd && s[i] != ';'; i++) {};
+  int paramStart = i;
+
+  for(s = header.data(), i=0; i < paramStart && s[i] != '-'; i++) {};
+  int langEnd = i;
+
+  s = header.data();
+
+  String ret(s, langEnd, CopyString);
+  if( paramStart > langEnd + 1) {
+    String country(s + langEnd + 1, paramStart - langEnd - 1, CopyString);
+    ret += "_";
+    ret += StringUtil::ToUpper(country);
+  }
+
+  return ret;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 const int64 q_Normalizer$$NONE     = UNORM_NONE;

@@ -416,7 +416,7 @@ function get_serialized_default($s) {
     $s = preg_replace('/k_/', '', $s);
     return serialize(eval("return $s;"));
   }
-  if (preg_match('/^q_([A-Za-z]+)_(\w+)$/', $s, $m)) {
+  if (preg_match('/^q_([A-Za-z]+)\$\$(\w+)$/', $s, $m)) {
     $class = $m[1];
     $constant = $m[2];
     return serialize(eval("return $class::$constant;"));
