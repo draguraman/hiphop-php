@@ -144,6 +144,12 @@ class c_Locale : public ExtObjectData {
   public: Variant t___destruct();
   DECLARE_METHOD_INVOKE_HELPERS(__destruct);
 
+  public: static String ti_acceptfromhttp(const char* cls , CStrRef header);
+  public: static String t_acceptfromhttp(CStrRef header) {
+    return ti_acceptfromhttp("locale", header);
+  }
+  DECLARE_METHOD_INVOKE_HELPERS(acceptfromhttp);
+
   // implemented by HPHP
   public: c_Locale *create();
   static const ClassPropTable os_prop_table;

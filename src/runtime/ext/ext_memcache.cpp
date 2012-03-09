@@ -18,15 +18,25 @@
 #include <runtime/ext/ext_memcache.h>
 #include <runtime/base/util/request_local.h>
 #include <runtime/base/ini_setting.h>
+#include <runtime/ext/minilzo/minilzo.h>
+#include <zlib.h>
 
-#define MMC_SERIALIZED 1
-#define MMC_COMPRESSED 2
+#define MMC_SERIALIZED 			(1 << 0)
+#define MMC_COMPRESSED 			(1 << 1)
+#define MMC_COMPRESSED_LZO 		(1 << 2)
+#define MMC_CHKSUM	   			(1 << 3)
+#define MMC_COMPRESSED_BZIP2 	(1 << 4)
+#define MMC_SERIALIZED_IGBINARY (1 << 5)
 
 namespace HPHP {
 IMPLEMENT_DEFAULT_EXTENSION(memcache);
 
 bool ini_on_update_hash_strategy(CStrRef value, void *p);
 bool ini_on_update_hash_function(CStrRef value, void *p);
+
+static int memcache_lzo_enabled = (lzo_init() == LZO_E_OK)? 1: 0;
+
+lzo_align_t __LZO_MMODEL lzo_wmem[ ((LZO1X_1_MEM_COMPRESS) + (sizeof(lzo_align_t) - 1)) / sizeof(lzo_align_t) ];
 
 class MEMCACHEGlobals : public RequestEventHandler {
 public:
@@ -80,6 +90,11 @@ bool ini_on_update_hash_function(CStrRef value, void *p) {
 c_Memcache::c_Memcache(const ObjectStaticCallbacks *cb) :
     ExtObjectData(cb), m_memcache(), m_compress_threshold(0),
     m_min_compress_savings(0.2) {
+
+  if(!memcache_lzo_enabled) {
+    raise_error("memcache_lzo_enabled=false. lzo_init() failed.");
+  }
+
   memcached_create(&m_memcache);
 
   if (MEMCACHEG(hash_strategy) == "consistent") {
@@ -131,14 +146,140 @@ bool c_Memcache::t_pconnect(CStrRef host, int port /*= 0*/,
   return t_connect(host, port, timeout, timeoutms);
 }
 
+static const char* get_zlib_status_string(int status)
+  {
+    const char* s;
+    switch (status)
+      {
+      case Z_MEM_ERROR:
+        s = "Not enough memory to perform compression";
+        break;
+      case Z_BUF_ERROR:
+        s = "Not enough room in the output buffer to perform compression";
+        break;
+      case Z_STREAM_ERROR:
+        s = "Invalid compression level";
+        break;
+      default:
+        s = "Unknown error during compression";
+        break;
+      }
+    return s;
+  }
+
+static String mmc_compress(const String &sdata, int &flag) {
+  int status = Z_ERRNO, data_len;
+  char *result;
+  unsigned long result_len = 0;
+
+  data_len = sdata.length();
+  // *result_len = data_len + (data_len / 1000) + 25 + 1; /* some magic from zlib.c */
+  result_len = data_len + (data_len / 16) + 64 + 3; /* worst-case expansion for lzo */
+  result = (char *)malloc(result_len);
+
+  if (flag & MMC_COMPRESSED) {
+    int level = 0;  // MEMCACHE_G(compression_level)
+    if (level == 0)
+      level = 6;
+
+    if (level >= 0) {
+      status = compress2((unsigned char *)result, &result_len,
+          (unsigned const char *) sdata.c_str(), data_len, level);
+    }
+    else {
+      status = compress((unsigned char *)result, &result_len,
+          (unsigned const char *) sdata.c_str(), data_len);
+    }
+  }
+  else if (flag & MMC_COMPRESSED_LZO) {
+    status = lzo1x_1_compress((const unsigned char*)sdata.c_str(), data_len, (unsigned char*)result, &result_len, lzo_wmem);
+    switch (status)
+      {
+    case LZO_E_OK:
+      status = Z_OK;
+      break;
+    case LZO_E_OUTPUT_OVERRUN:
+      status = Z_BUF_ERROR;
+      break;
+    default:
+      status = Z_DATA_ERROR;
+      break;
+      }
+  }
+
+  if (status == Z_OK) {
+    result = (char*)realloc(result, result_len + 1);
+    result[result_len] = '\0';
+    return String(result, result_len, AttachString);
+  }
+  else {
+    free(result);
+    raise_error("mmc_compress(): compression failed data_len=%d status=%d error=%s",
+        data_len, status, get_zlib_status_string(status));
+    return null;
+  }
+}
+
 String static memcache_prepare_for_storage(CVarRef var, int &flag) {
-  if (var.isString()) {
-    return var.toString();
-  } else if (var.isNumeric() || var.isBoolean()) {
-    return var.toString();
-  } else {
-    flag |= MMC_SERIALIZED;
-    return f_serialize(var);
+    if (var.isString()) {
+      return var.toString();
+    }
+    else if (var.isNumeric() || var.isBoolean()) {
+      return var.toString();
+    }
+    else {
+      flag |= MMC_SERIALIZED;
+      String sdata = f_serialize(var);
+
+      if(flag & (MMC_COMPRESSED | MMC_COMPRESSED_LZO) ) {
+        sdata = mmc_compress(sdata, flag);
+      }
+      return sdata;
+    }
+  }
+
+static String mmc_uncompress(const char *payload, size_t payload_len, uint32_t flags) {
+  unsigned int factor = 1, maxfactor = 16;
+  char *result;
+  unsigned long result_len = 0;
+  char *tmp1 = NULL;
+  int status = Z_ERRNO;
+
+  do {
+    result_len = (unsigned long) payload_len * (1 << factor++);
+    result = (char *) realloc(tmp1, result_len);
+    if (flags & MMC_COMPRESSED) {
+      status = uncompress((unsigned char *)result, &result_len,
+          (unsigned const char *) payload, payload_len);
+    }
+    /*
+    else if (flags & MMC_COMPRESSED_BZIP2) {
+      status = bz2_decompress_safe((unsigned char**) result, result_len, (unsigned const char *) data, data_len);
+    }
+    */
+    else if(flags & MMC_COMPRESSED_LZO) {
+      status = lzo1x_decompress_safe((const unsigned char*)payload, payload_len,
+          (unsigned char*)result, &result_len, NULL);
+      if (status == LZO_E_OUTPUT_OVERRUN )
+        status = Z_BUF_ERROR;
+      else if (status == LZO_E_OK )
+        status = Z_OK;
+      else
+        status = Z_DATA_ERROR;
+    }
+    tmp1 = result;
+  }
+  while (status == Z_BUF_ERROR && factor < maxfactor);
+
+  if (status == Z_OK) {
+    result = (char*)realloc(result, result_len + 1);
+    result[result_len] = '\0';
+    return String(result, result_len, AttachString);
+  }
+  else {
+    raise_error("memcache_fetch_from_storage: decompression failed payload_len=%d flags=%x status=%d error=%s",
+        payload_len, flags, status, get_zlib_status_string(status));
+    return null;
   }
 }
 
@@ -146,17 +287,19 @@ Variant static memcache_fetch_from_storage(const char *payload,
                                            size_t payload_len,
                                            uint32_t flags) {
   Variant ret = null;
+  String payload2;
 
-  if (flags & MMC_COMPRESSED) {
-    raise_warning("Unable to handle compressed values yet");
-    return null;
+  if (flags & (MMC_COMPRESSED | MMC_COMPRESSED_LZO) ) {
+    payload2 = mmc_uncompress(payload, payload_len, flags);
   }
 
   if (flags & MMC_SERIALIZED) {
-    ret = f_unserialize(String(payload, payload_len, AttachLiteral));
-    // raise_notice("unable to unserialize data");
+    ret = f_unserialize(payload2.length() > 0 ? payload2 : String(payload, payload_len, AttachLiteral));
+    if( ret == null ) {
+      raise_warning("unable to unserialize data payload_len=%d flags=%x", payload_len, flags);
+    }
   } else {
-    ret = String(payload, payload_len, CopyString);
+    ret = payload2.length() > 0 ? payload2 : String(payload, payload_len, CopyString);
   }
 
   return ret;
@@ -398,6 +541,22 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
       }
 
       memcached_result_free(&result);
+
+      /* Process missing keys */
+      std::vector<char> key_server_stats;
+      key_server_stats.reserve(keyArr.size() * sizeof(bool));
+      bool* statBuf = (bool*)&key_server_stats[0];
+      memcached_check_servers_by_keys(&m_memcache, NULL, 0,
+    		  &real_keys[0], &key_len[0], real_keys.size(), statBuf);
+
+      int i = 0;
+      for (ArrayIter iter(keyArr); iter; ++iter) {
+    	const char *key = iter.second().toString().c_str();
+    	if( !var_array.exists(key) ) {
+          return_val.set(key, statBuf[i]);
+    	}
+    	i++;
+      }
 
       flags = flags_array;
       var = var_array;
