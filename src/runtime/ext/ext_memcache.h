@@ -76,6 +76,10 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(get);
   public: Variant t_get2(CVarRef key, VRefParam val, VRefParam flags = null, VRefParam cas = null);
   DECLARE_METHOD_INVOKE_HELPERS(get2);
+  public: Variant t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRefParam flags = null, VRefParam cas = null);
+  DECLARE_METHOD_INVOKE_HELPERS(getbykey);
+  public: bool t_setbykey(CStrRef key, CVarRef val, int flag = 0, int expire = 0, VRefParam cas = null, CStrRef shardKey = null);
+  DECLARE_METHOD_INVOKE_HELPERS(setbykey);
   public: bool t_delete(CStrRef key, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(delete);
   public: int64 t_increment(CStrRef key, int offset = 1);

@@ -20,13 +20,14 @@
 #include <runtime/base/ini_setting.h>
 #include <runtime/ext/minilzo/minilzo.h>
 #include <zlib.h>
+#include <bzlib.h>
 
-#define MMC_SERIALIZED 			(1 << 0)
-#define MMC_COMPRESSED 			(1 << 1)
-#define MMC_COMPRESSED_LZO 		(1 << 2)
-#define MMC_CHKSUM	   			(1 << 3)
-#define MMC_COMPRESSED_BZIP2 	(1 << 4)
-#define MMC_SERIALIZED_IGBINARY (1 << 5)
+#define MMC_SERIALIZED          (1 << 0)        // 1
+#define MMC_COMPRESSED          (1 << 1)        // 2
+#define MMC_COMPRESSED_LZO      (1 << 2)        // 4
+#define MMC_CHKSUM	        (1 << 3)        // 8
+#define MMC_COMPRESSED_BZIP2    (1 << 4)        // 16
+#define MMC_SERIALIZED_IGBINARY (1 << 5)        // 32
 
 namespace HPHP {
 IMPLEMENT_DEFAULT_EXTENSION(memcache);
@@ -167,6 +168,74 @@ static const char* get_zlib_status_string(int status)
     return s;
   }
 
+
+static int bz2_decompress_safe(unsigned char** result, size_t *result_len, unsigned const char* data, size_t data_len) /* {{{ */
+  {
+    /* refer to ext/bz2/bz2.c */
+    int error;
+    long small = 0;
+#if defined(PHP_WIN32)
+    unsigned __int64 size = 0;
+#else
+    unsigned long long size = 0;
+#endif
+    bz_stream bzs;
+
+    bzs.bzalloc = NULL;
+    bzs.bzfree = NULL;
+
+    if (BZ2_bzDecompressInit(&bzs, 0, small) != BZ_OK) {
+      raise_error("BZ2_bzDecompressInit() failed data_len=%d", data_len);
+      return 0;
+    }
+
+    bzs.next_in = (char*) data;
+    bzs.avail_in = data_len;
+
+    /* review: result is exact size as result_len (there is no + 1) */
+    bzs.avail_out = *result_len;
+    bzs.next_out = (char*)*result;
+
+    while ((error = BZ2_bzDecompress(&bzs)) == BZ_OK && bzs.avail_in > 0) {
+      /* compression is better then 2:1, need to allocate more memory */
+      bzs.avail_out = data_len;
+      size = (bzs.total_out_hi32 * (unsigned int) -1) + bzs.total_out_lo32;
+      //*result = safe_erealloc(*result, 1, bzs.avail_out, size);
+      *result = (unsigned char*)realloc(*result, bzs.avail_out + size);
+      bzs.next_out = (char*)(*result) + size;
+    }
+
+    if (error == BZ_STREAM_END || error == BZ_OK) {
+      size = (bzs.total_out_hi32 * (unsigned int) -1) + bzs.total_out_lo32;
+    }
+    else { /* real error */
+      raise_error("BZ2_bzDecompress() failed");
+  }
+
+    BZ2_bzDecompressEnd(&bzs);
+
+    *result_len = size;
+
+    switch (error)
+      {
+      case BZ_STREAM_END:
+      case BZ_OK:
+        return Z_OK;
+      }
+
+    return Z_DATA_ERROR;
+
+  }
+
+inline int convert_lzo_status(int status) {
+  if (status == LZO_E_OUTPUT_OVERRUN )
+    return Z_BUF_ERROR;
+  else if (status == LZO_E_OK )
+    return Z_OK;
+  else
+    return Z_DATA_ERROR;
+}
+
 static String mmc_compress(const String &sdata, int &flag) {
   int status = Z_ERRNO, data_len;
   char *result;
@@ -193,18 +262,22 @@ static String mmc_compress(const String &sdata, int &flag) {
   }
   else if (flag & MMC_COMPRESSED_LZO) {
     status = lzo1x_1_compress((const unsigned char*)sdata.c_str(), data_len, (unsigned char*)result, &result_len, lzo_wmem);
-    switch (status)
-      {
-    case LZO_E_OK:
-      status = Z_OK;
-      break;
-    case LZO_E_OUTPUT_OVERRUN:
-      status = Z_BUF_ERROR;
-      break;
-    default:
-      status = Z_DATA_ERROR;
-      break;
-      }
+    status = convert_lzo_status(status);
+  }
+  else if(flag & MMC_COMPRESSED_BZIP2) {
+    /* optimize later for bzip2 compress estimations */
+    /* *result_len = data_len + (0.01 * data_len) + 600; */
+    int block_size = 4;
+    int work_factor = 0;
+
+    unsigned int intRetSize = result_len;
+    status = BZ2_bzBuffToBuffCompress(result, &intRetSize, (char*)sdata.c_str(), data_len, block_size, 0, work_factor);
+    result_len = intRetSize;
+
+    switch(status) {
+      case BZ_OK: status = Z_OK; break;
+      default: status = Z_DATA_ERROR; break;
+    }
   }
 
   if (status == Z_OK) {
@@ -231,7 +304,7 @@ String static memcache_prepare_for_storage(CVarRef var, int &flag) {
       flag |= MMC_SERIALIZED;
       String sdata = f_serialize(var);
 
-      if(flag & (MMC_COMPRESSED | MMC_COMPRESSED_LZO) ) {
+      if(flag & (MMC_COMPRESSED | MMC_COMPRESSED_LZO | MMC_COMPRESSED_BZIP2) ) {
         sdata = mmc_compress(sdata, flag);
       }
       return sdata;
@@ -252,20 +325,12 @@ static String mmc_uncompress(const char *payload, size_t payload_len, uint32_t f
       status = uncompress((unsigned char *)result, &result_len,
           (unsigned const char *) payload, payload_len);
     }
-    /*
-    else if (flags & MMC_COMPRESSED_BZIP2) {
-      status = bz2_decompress_safe((unsigned char**) result, result_len, (unsigned const char *) data, data_len);
-    }
-    */
     else if(flags & MMC_COMPRESSED_LZO) {
-      status = lzo1x_decompress_safe((const unsigned char*)payload, payload_len,
-          (unsigned char*)result, &result_len, NULL);
-      if (status == LZO_E_OUTPUT_OVERRUN )
-        status = Z_BUF_ERROR;
-      else if (status == LZO_E_OK )
-        status = Z_OK;
-      else
-        status = Z_DATA_ERROR;
+      status = lzo1x_decompress_safe((const unsigned char*)payload, payload_len, (unsigned char*)result, &result_len, NULL);
+      status = convert_lzo_status(status);
+    }
+    else if (flags & MMC_COMPRESSED_BZIP2) {
+      status = bz2_decompress_safe((unsigned char**)&result, &result_len, (unsigned const char *)payload, payload_len);
     }
     tmp1 = result;
   }
@@ -289,7 +354,7 @@ Variant static memcache_fetch_from_storage(const char *payload,
   Variant ret = null;
   String payload2;
 
-  if (flags & (MMC_COMPRESSED | MMC_COMPRESSED_LZO) ) {
+  if (flags & (MMC_COMPRESSED | MMC_COMPRESSED_LZO | MMC_COMPRESSED_BZIP2) ) {
     payload2 = mmc_uncompress(payload, payload_len, flags);
   }
 
@@ -617,6 +682,106 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
   }
 
   return false;
+}
+
+Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRefParam flags /*= null*/, VRefParam cas /*= null*/) {
+
+  memcached_result_st result;
+  const char* key_ptr = key.c_str();
+  size_t key_length = key.size();
+
+  memcached_return_t status = memcached_mget_by_key(&m_memcache,
+      shardKey.data(), shardKey.size(),
+      (const char * const *)&key_ptr,
+      (const size_t *)&key_length, 1);
+
+  if( status != MEMCACHED_SUCCESS ) {
+    raise_warning("t_getbykey(): memcached_mget_by_key() failed. status=%d", (int)status);
+    return false;
+  }
+
+  memcached_result_create(&m_memcache, &result);
+
+  bool fRet = false;
+
+  do {
+    if( memcached_fetch_result(&m_memcache, &result, &status) == NULL ) {
+      raise_warning("t_getbykey(): memcached_fetch_result() returned NULL");
+      break;
+    }
+
+    if (status == MEMCACHED_END) status = MEMCACHED_NOTFOUND;
+
+    if (status != MEMCACHED_SUCCESS) {
+      raise_warning("t_getbykey(): memcached_fetch_result() failed. status=%d", (int)status);
+      break;
+    }
+
+    const char *payload;
+    size_t payload_len;
+    uint32_t mflag;
+
+    payload     = memcached_result_value(&result);
+    payload_len = memcached_result_length(&result);
+    mflag        = memcached_result_flags(&result);
+
+    Variant v = memcache_fetch_from_storage(payload, payload_len, mflag);
+    if( v != null ) {
+      val = v;
+
+      if( flags.isReferenced() ) {
+        flags = (int)mflag;
+      }
+
+      if(cas.isReferenced()) {
+        cas = (int64)memcached_result_cas(&result);
+      }
+
+      fRet = true;
+    }
+    else {
+      raise_warning("t_getbykey(): memcache_fetch_from_storage() returned null");
+    }
+  } while(true);
+
+  memcached_result_free(&result);
+
+  return fRet;
+}
+
+bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expire /*= 0*/, VRefParam cas /*= null*/, CStrRef shardKey /*= null*/) {
+
+  memcached_return_t status;
+
+  String serialized = memcache_prepare_for_storage(val, flag);
+  if( serialized.isNull() ) {
+    raise_warning("t_setbykey(): memcache_prepare_for_storage() returned null");
+    return false;
+  }
+
+  if( cas.isReferenced() ) {
+    Variant vcas = cas;
+
+    status = memcached_cas_by_key(&m_memcache,
+        shardKey.data(), shardKey.size(),
+        key.data(), key.size(),
+        serialized.c_str(), serialized.size(),
+        expire,
+        flag,
+        vcas.toInt64()
+        );
+  }
+  else {
+    status = memcached_set_by_key(&m_memcache,
+        shardKey.data(), shardKey.size(),
+        key.data(), key.size(),
+        serialized.c_str(), serialized.size(),
+        expire,
+        flag
+        );
+  }
+
+  return status == MEMCACHED_SUCCESS;
 }
 
 bool c_Memcache::t_delete(CStrRef key, int expire /*= 0*/) {
