@@ -44,7 +44,7 @@ public:
   std::string hash_strategy;
   std::string hash_function;
 
-  MEMCACHEGlobals() {}
+  MEMCACHEGlobals() {;}
 
   virtual void requestInit() {
     hash_strategy = "standard";
@@ -294,10 +294,8 @@ static String mmc_compress(const String &sdata, int &flag) {
 }
 
 String static memcache_prepare_for_storage(CVarRef var, int &flag) {
-    if (var.isString()) {
-      return var.toString();
-    }
-    else if (var.isNumeric() || var.isBoolean()) {
+    if (var.isString() || var.isNumeric() || var.isBoolean()) {
+      flag &= ~(MMC_COMPRESSED | MMC_COMPRESSED_LZO | MMC_COMPRESSED_BZIP2);
       return var.toString();
     }
     else {
@@ -342,7 +340,7 @@ static String mmc_uncompress(const char *payload, size_t payload_len, uint32_t f
     return String(result, result_len, AttachString);
   }
   else {
-    raise_error("memcache_fetch_from_storage: decompression failed payload_len=%d flags=%x status=%d error=%s",
+    raise_warning("memcache_fetch_from_storage: decompression failed payload_len=%d flags=%x status=%d error=%s",
         payload_len, flags, status, get_zlib_status_string(status));
     return null;
   }
@@ -364,7 +362,14 @@ Variant static memcache_fetch_from_storage(const char *payload,
       raise_warning("unable to unserialize data payload_len=%d flags=%x", payload_len, flags);
     }
   } else {
-    ret = payload2.length() > 0 ? payload2 : String(payload, payload_len, CopyString);
+    if( payload2.length() > 0 ) {
+      ret = payload2;
+    }
+    else {
+      String str(payload, payload_len, CopyString);
+      ret = str;
+    }
+    //ret = payload2.length() > 0 ? payload2 : String(payload, payload_len, CopyString);
   }
 
   return ret;
@@ -685,6 +690,7 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 }
 
 Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRefParam flags /*= null*/, VRefParam cas /*= null*/) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::getbykey);
 
   memcached_result_st result;
   const char* key_ptr = key.c_str();
@@ -723,7 +729,7 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
 
     payload     = memcached_result_value(&result);
     payload_len = memcached_result_length(&result);
-    mflag        = memcached_result_flags(&result);
+    mflag       = memcached_result_flags(&result);
 
     Variant v = memcache_fetch_from_storage(payload, payload_len, mflag);
     if( v != null ) {
@@ -742,6 +748,8 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
     else {
       raise_warning("t_getbykey(): memcache_fetch_from_storage() returned null");
     }
+
+    break;
   } while(true);
 
   memcached_result_free(&result);
@@ -750,6 +758,7 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
 }
 
 bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expire /*= 0*/, VRefParam cas /*= null*/, CStrRef shardKey /*= null*/) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::setbykey);
 
   memcached_return_t status;
 
@@ -759,16 +768,22 @@ bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expi
     return false;
   }
 
-  if( cas.isReferenced() ) {
-    Variant vcas = cas;
+  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
 
+  uint64_t casInt = 0;
+  if( cas.isReferenced() ) {
+    Variant& vcas = (Variant&)cas;
+    casInt = vcas.toInt64();
+  }
+
+  if(casInt != 0) {
     status = memcached_cas_by_key(&m_memcache,
         shardKey.data(), shardKey.size(),
         key.data(), key.size(),
         serialized.c_str(), serialized.size(),
         expire,
         flag,
-        vcas.toInt64()
+        casInt
         );
   }
   else {
@@ -792,6 +807,20 @@ bool c_Memcache::t_delete(CStrRef key, int expire /*= 0*/) {
   }
 
   memcached_return_t ret = memcached_delete(&m_memcache,
+                                            key.c_str(), key.length(),
+                                            expire);
+  return (ret == MEMCACHED_SUCCESS);
+}
+
+bool c_Memcache::t_deletebykey(CStrRef key, CStrRef shardKey, int expire /*= 0*/) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::deletebykey);
+  if (key.empty()) {
+    raise_warning("Key cannot be empty");
+    return false;
+  }
+
+  memcached_return_t ret = memcached_delete_by_key(&m_memcache,
+                                            shardKey.c_str(), shardKey.length(),
                                             key.c_str(), key.length(),
                                             expire);
   return (ret == MEMCACHED_SUCCESS);

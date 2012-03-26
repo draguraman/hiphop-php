@@ -1091,7 +1091,7 @@ DefineFunction(
       ),
       array(
         'name'   => "cas",
-        'type'   => Variant | Reference,
+        'type'   => Variant | Reference, 
         'value'  => "null",
         'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
       ),
@@ -1131,7 +1131,7 @@ DefineFunction(
       ),
       array(
         'name'   => "cas",
-        'type'   => Variant | Reference,
+        'type'   => Variant | Reference, 
         'value'  => "null",
         'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
       ),
@@ -1159,6 +1159,35 @@ DefineFunction(
         'name'   => "key",
         'type'   => String,
         'desc'   => "The key associated with the item to delete.",
+      ),
+      array(
+        'name'   => "expire",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Execution time of the item. If it's equal to zero, the item will be deleted right away whereas if you set it to 30, the item will be deleted in 30 seconds.",
+      ),
+    ),
+  ));
+
+DefineFunction(
+  array(
+    'name'   => "deleteByKey",
+    'desc'   => "Memcache::deleteByKey() deletes item with the key found on the host pointed by the shardKey. If parameter timeout is specified, the item will expire after timeout seconds. Also you can use memcache_delete() function.",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The key associated with the item to delete.",
+      ),
+      array(
+        'name'   => "shardKey",
+        'type'   => String,
+        'desc'   => "The shard key used to locate the host",
       ),
       array(
         'name'   => "expire",

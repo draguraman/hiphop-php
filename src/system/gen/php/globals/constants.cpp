@@ -2066,6 +2066,7 @@ const int64 k_XSD_UNSIGNEDLONG = 139LL;
 const int64 k_XSD_UNSIGNEDSHORT = 141LL;
 const int64 k_YESEXPR = 327680LL;
 const bool k_ZEND_THREAD_SAFE = false;
+const bool k_RUNNING_HIPHOP = true;
 
 /* preface starts */
 extern CallInfo ci_;

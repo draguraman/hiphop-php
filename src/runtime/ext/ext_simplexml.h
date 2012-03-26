@@ -36,7 +36,6 @@ bool f_libxml_disable_entity_loader(bool disable = true);
 
 ///////////////////////////////////////////////////////////////////////////////
 // class SimpleXMLElement
-
 FORWARD_DECLARE_CLASS_BUILTIN(SimpleXMLElement);
 class c_SimpleXMLElement :
       public ExtObjectDataFlags<ObjectData::UseGet|

@@ -13521,6 +13521,22 @@ Variant ifa_rawurlencode(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
 Variant i_rawurlencode(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_rawurlencode);
 }
+Variant ifa_memcache_cas(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count < 3)) return throw_wrong_arguments("memcache_cas", count, 3, 6, 1);
+  CVarRef arg0(a0);
+  CVarRef arg1(a1);
+  CVarRef arg2(a2);
+  if (count <= 3) return (x_memcache_cas(arg0, arg1, arg2));
+  CVarRef arg3(a3);
+  if (count <= 4) return (x_memcache_cas(arg0, arg1, arg2, arg3));
+  CVarRef arg4(a4);
+  if (count <= 5) return (x_memcache_cas(arg0, arg1, arg2, arg3, arg4));
+  CVarRef arg5(a5);
+  return (x_memcache_cas(arg0, arg1, arg2, arg3, arg4, arg5));
+}
+Variant i_memcache_cas(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_memcache_cas);
+}
 Variant ifa_magickblackthresholdimage(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 2)) return throw_wrong_arguments("magickblackthresholdimage", count, 2, 2, 1);
   CVarRef arg0(a0);
@@ -22724,6 +22740,7 @@ CallInfo ci_dom_document_create_attribute((void*)&i_dom_document_create_attribut
 CallInfo ci_ob_get_level((void*)&i_ob_get_level, (void*)&ifa_ob_get_level, 0, 0, 0x0000000000000000LL);
 CallInfo ci_xbox_send_message((void*)&i_xbox_send_message, (void*)&ifa_xbox_send_message, 4, 0, 0x0000000000000002LL);
 CallInfo ci_rawurlencode((void*)&i_rawurlencode, (void*)&ifa_rawurlencode, 1, 0, 0x0000000000000000LL);
+CallInfo ci_memcache_cas((void*)&i_memcache_cas, (void*)&ifa_memcache_cas, 6, 0, 0x0000000000000000LL);
 CallInfo ci_magickblackthresholdimage((void*)&i_magickblackthresholdimage, (void*)&ifa_magickblackthresholdimage, 2, 0, 0x0000000000000000LL);
 CallInfo ci_dom_node_is_same_node((void*)&i_dom_node_is_same_node, (void*)&ifa_dom_node_is_same_node, 2, 0, 0x0000000000000000LL);
 CallInfo ci_hphp_create_continuation((void*)&i_hphp_create_continuation, (void*)&ifa_hphp_create_continuation, 4, 0, 0x0000000000000000LL);
@@ -34577,6 +34594,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 7323:
       HASH_GUARD(0x36F7F9FD7766DC9BLL, xmlwriter_end_comment) {
         ci = &ci_xmlwriter_end_comment;
+        return true;
+      }
+      break;
+    case 7331:
+      HASH_GUARD(0x7D40B85572F0BCA3LL, memcache_cas) {
+        ci = &ci_memcache_cas;
         return true;
       }
       break;

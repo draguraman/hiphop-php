@@ -21,11 +21,14 @@
 #include <runtime/base/util/request_local.h>
 
 #include <system/lib/systemlib.h>
-
+#include <malloc.h>
+#include <libxml2/libxml/xmlmemory.h>
 namespace HPHP {
 IMPLEMENT_DEFAULT_EXTENSION(SimpleXML);
 ///////////////////////////////////////////////////////////////////////////////
 
+Mutex s_simplexml_lock;
+int s_simplexml_count=0;
 // This is to make sure each node holds one reference of m_doc, so not to let
 // it go out of scope.
 class XmlDocWrapper : public SweepableResourceData {
@@ -41,7 +44,13 @@ public:
 
   ~XmlDocWrapper() {
     if (m_doc) {
+      Lock lock(s_simplexml_lock);
       xmlFreeDoc(m_doc);
+      xmlCleanupParser();
+      s_simplexml_count++;
+      if (s_simplexml_count > 3) {
+	      s_simplexml_count = 0;
+      }
     }
   }
 
@@ -118,7 +127,7 @@ static bool isSpaceString(xmlNodePtr node, xmlChar *content) {
 
 	if(node->next && node->next->type == XML_ELEMENT_NODE)
 		return false;
-	char *str = strdup((char *)content);
+	const char *str = (char *)content;
 	int len = strlen(str);
 
 	for (int i=0; i < len; i++) {
@@ -238,7 +247,6 @@ static void add_registered_namespaces(Array &out, xmlNodePtr node,
     }
   }
 }
-
 ///////////////////////////////////////////////////////////////////////////////
 // simplexml
 
@@ -264,8 +272,11 @@ Variant f_simplexml_load_string(CStrRef data,
       return null;
     }
   }
-
-  xmlDocPtr doc = xmlReadMemory(data.data(), data.size(), NULL, NULL, options);
+  xmlDocPtr doc; 
+  {
+  Lock lock(s_simplexml_lock);
+  doc = xmlReadMemory(data.data(), data.size(), NULL, NULL, options);
+  }
   xmlNodePtr root = xmlDocGetRootElement(doc);
   if (!doc) {
     return false;
@@ -297,7 +308,6 @@ c_SimpleXMLElement::c_SimpleXMLElement(const ObjectStaticCallbacks *cb) :
   m_children = Array::Create();
   m_array = Array::Create();
 }
-
 c_SimpleXMLElement::~c_SimpleXMLElement() {
   if (m_xpath) {
     xmlXPathFreeContext(m_xpath);
@@ -311,12 +321,12 @@ Array c_SimpleXMLElement::__populate_m_array() {
           	getTyped<c_SimpleXMLElement>();
 		//in array rep'n the text elements are not objects
 		if (elem->m_is_text && elem->m_attributes.toArray().empty()) {
-			m_array.set(iter.first(),elem->m_children[0]);
+			m_array.set(iter.first(),(elem->m_children[0]));
 		} else {
-			m_array.set(iter.first(),iter.second());
+			m_array.set(iter.first(),(iter.second()));
 		}
 	} else {
-		m_array.set(iter.first(),iter.second()); 
+		m_array.set(iter.first(),(iter.second())); 
 	}
       }
       return m_array;
@@ -337,7 +347,12 @@ void c_SimpleXMLElement::t___construct(CStrRef data, int64 options /* = 0 */,
     xml = ret.toString();
   }
 
-  xmlDocPtr doc = xmlReadMemory(xml.data(), xml.size(), NULL, NULL, options);
+  xmlDocPtr doc; 
+  {
+  Lock lock(s_simplexml_lock);
+  doc = xmlReadMemory(data.data(), data.size(), NULL, NULL, options);
+  }
+
   if (doc) {
     m_doc = Object(NEWOBJ(XmlDocWrapper)(doc));
     m_node = xmlDocGetRootElement(doc);
@@ -521,7 +536,7 @@ Array removeComment(Variant m_children, CStrRef ns, bool is_prefix) {
         if (elem->m_node && match_ns(elem->m_node, ns, is_prefix) && !isComment(elem->m_node)) {
           props.set(iter.first(), iter.second());
         }
-      } else {
+      } else if (iter.second().isArray()) {
         Array subnodes;
         for (ArrayIter iter2(iter.second()); iter2; ++iter2) {
           c_SimpleXMLElement *elem = iter2.second().toObject().
@@ -537,6 +552,8 @@ Array removeComment(Variant m_children, CStrRef ns, bool is_prefix) {
             props.set(iter.first(), subnodes);
           }
         }
+      } else if (iter.second().isString()) {
+      		props.set(0,iter.second());
       }
     }
 		return props;
@@ -545,7 +562,6 @@ Array removeComment(Variant m_children, CStrRef ns, bool is_prefix) {
 Object c_SimpleXMLElement::t_children(CStrRef ns /* = "" */,
                                       bool is_prefix /* = false */) {
   INSTANCE_METHOD_INJECTION_BUILTIN(SimpleXMLElement, SimpleXMLElement::children);
-
   if (m_is_attribute) {
     return Object();
   }
@@ -794,7 +810,6 @@ Variant c_SimpleXMLElement::t___get(Variant name) {
 Variant c_SimpleXMLElement::t___unset(Variant name) {
   INSTANCE_METHOD_INJECTION_BUILTIN(SimpleXMLElement, SimpleXMLElement::__unset);
   if (m_node == NULL) return null;
-
   Variant node;
   if (m_is_attribute) {
     node = m_attributes[name];
@@ -807,6 +822,7 @@ Variant c_SimpleXMLElement::t___unset(Variant name) {
       node.toObject().getTyped<c_SimpleXMLElement>();
     if (elem->m_node) {
       xmlUnlinkNode(elem->m_node);
+      xmlFreeNode(elem->m_node);
     }
   } else if (node.isArray()) {
     for (ArrayIter iter(node); iter; ++iter) {
@@ -814,6 +830,7 @@ Variant c_SimpleXMLElement::t___unset(Variant name) {
         getTyped<c_SimpleXMLElement>();
       if (elem->m_node) {
         xmlUnlinkNode(elem->m_node);
+        xmlFreeNode(elem->m_node);
       }
     }
   }
@@ -855,7 +872,7 @@ static void change_node_zval(xmlNodePtr node, CStrRef value) {
 Variant c_SimpleXMLElement::t___set(Variant name, Variant value) {
   INSTANCE_METHOD_INJECTION_BUILTIN(SimpleXMLElement, SimpleXMLElement::__set);
   if (m_node == NULL) return null;
-
+  
   String svalue = value.toString();
   xmlChar *sv = svalue.empty() ? NULL : (xmlChar *)svalue.data();
   String sname = name.toString();
@@ -875,6 +892,7 @@ Variant c_SimpleXMLElement::t___set(Variant name, Variant value) {
       xmlNodePtr tempnode;
       while ((tempnode = (xmlNodePtr)elem->m_node->children)) {
         xmlUnlinkNode(tempnode);
+	xmlFreeNode(tempnode);
       }
       elem->m_children = Array::Create();
       change_node_zval(elem->m_node, svalue);
@@ -942,6 +960,11 @@ double c_SimpleXMLElement::o_toDouble() const {
 
 Array c_SimpleXMLElement::o_toArray() const {
   if (m_attributes.toArray().empty()) {
+    // return an empty array for text node
+    if (m_is_text) {
+    	Array ret;
+    	return ret;
+    }
     return m_array;
   }
   Array ret;
@@ -1057,6 +1080,7 @@ void c_SimpleXMLElement::t_offsetunset(CVarRef index) {
       if (String((char*)attr->name, xmlStrlen(attr->name), AttachLiteral) ==
           name) {
         xmlUnlinkNode((xmlNodePtr)attr);
+	xmlFreeNode((xmlNodePtr)attr);
         break;
       }
     }
@@ -1232,7 +1256,6 @@ public:
     clear();
   }
 };
-
 class LibXmlErrors : public RequestEventHandler {
 public:
   virtual void requestInit() {

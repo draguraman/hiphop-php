@@ -745,7 +745,16 @@ Variant *ObjectData::RealPropPublicHelper(
 }
 
 Variant *ObjectData::o_realProp(CStrRef propName, int flags,
-                                CStrRef context /* = null_string */) const {
+                                CStrRef context /* = null_string */)  const {
+  DataType type;
+  void *ret;
+
+  ret = o_realPropPtr(propName,flags,&type, true, context);
+  return (Variant*)ret;
+}
+
+void *ObjectData::o_realPropPtr(CStrRef propName, int flags, DataType *retType, bool forceVariant,
+                                CStrRef context /* = null_string */)  const {
   const ObjectStaticCallbacks *orig = o_get_callbacks();
   if (UNLIKELY(!orig)) {
     return o_realPropHook(propName, flags, context);
@@ -809,14 +818,16 @@ Variant *ObjectData::o_realProp(CStrRef propName, int flags,
               LIKELY(!strcmp(prop->keyName->data() + prop->prop_offset,
                              propName->data()))) {
             const char *addr = ((const char *)obj) + prop->offset;
-            if (LIKELY(prop->type == KindOfVariant)) {
-              return (Variant*)addr;
-            }
-            if (flags & (RealPropCreate|RealPropWrite)) break;
-            if (LIKELY(!globals)) globals = (char*)get_global_variables();
-            Variant *res = &((Globals*)globals)->__realPropProxy;
-            *res = prop->getVariant(addr);
-            return res;
+	    *retType = (DataType)prop->type;
+
+	    if ((prop->type != KindOfVariant) && forceVariant) {
+	        if (LIKELY(!globals)) globals = (char*)get_global_variables();
+                Variant *res = &((Globals*)globals)->__realPropProxy;
+		*retType = KindOfVariant;
+                *res = prop->getVariant(addr);
+	        return (void*)res;
+	    }
+	    return (void*)addr;
           }
         } while (!prop++->isLast());
       }
@@ -824,6 +835,7 @@ Variant *ObjectData::o_realProp(CStrRef propName, int flags,
   }
 
   do_public:
+  *retType = KindOfVariant;
   return RealPropPublicHelper(propName, hash, flags, this, orig);
 }
 
@@ -1056,6 +1068,50 @@ CVarRef ObjectData::set(CStrRef s, CVarRef v) {
   o_set(s, v);
   return v;
 }
+
+void* ObjectData::o_lvalptr(CStrRef propName, CVarRef tmpForGet, DataType *retType,
+                            CStrRef context /* = null_string */) {
+  if (propName.size() == 0) {
+    throw EmptyObjectPropertyException();
+  }
+
+  bool useGet = getAttribute(UseGet);
+  int flags = useGet ? RealPropWrite : RealPropCreate | RealPropWrite;
+  if (void *t = o_realPropPtr(propName, flags, retType, false, context)) {
+    if (*retType == KindOfVariant) {
+	    if (!useGet||(*((Variant*)t)).isInitialized()) {
+		return t;
+	    }
+    } else {
+	    return t;
+    }
+  }
+  return NULL;
+}
+
+
+Variant &ObjectData::o_lvalSecondHalf(CStrRef propName, CVarRef tmpForGet,
+                            CStrRef context /* = null_string */) {
+  Variant &ret = const_cast<Variant&>(tmpForGet);
+  bool useGet = getAttribute(UseGet);
+  if (LIKELY(useGet)) {
+    AttributeClearer a(UseGet, this);
+    if (getAttribute(HasLval)) {
+      return *___lval(propName);
+    }
+
+    ret = t___get(propName);
+    return ret;
+  }
+
+  /* we only get here if its a protected property
+     under hphpi - and then o_getError fatals
+     with a suitable message
+  */
+  ret = o_getError(propName, context);
+  return ret;
+}
+
 
 Variant &ObjectData::o_lval(CStrRef propName, CVarRef tmpForGet,
                             CStrRef context /* = null_string */) {

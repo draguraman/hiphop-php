@@ -25,6 +25,7 @@
 #include <runtime/base/zend/zend_string.h>
 #include <runtime/base/array/array_iterator.h>
 #include <util/parser/hphp.tab.hpp>
+#include <runtime/ext/profile/extprofile_variable.h>
 
 #include <system/lib/systemlib.h>
 
@@ -3810,6 +3811,7 @@ void Variant::unserialize(VariableUnserializer *uns) {
         obj = create_object_only(s_PHP_Incomplete_Class);
         obj->o_set(s_PHP_Incomplete_Class_Name, clsName);
       }
+
       operator=(obj);
       int64 size = uns->readInt();
       char sep = uns->readChar();
@@ -3835,13 +3837,62 @@ void Variant::unserialize(VariableUnserializer *uns) {
             }
           }
           Variant tmp;
-          Variant &value = subLen != 0 ?
+	  DataType myType;
+ 	  void* valuePtr = subLen != 0 ?
             (key.charAt(1) == '*' ?
-             obj->o_lval(key.substr(subLen), tmp, clsName) :
-             obj->o_lval(key.substr(subLen), tmp,
+             obj->o_lvalptr(key.substr(subLen), tmp, &myType, clsName) :
+             obj->o_lvalptr(key.substr(subLen), tmp, &myType,
                          String(key.data() + 1, subLen - 2, AttachLiteral)))
-            : obj->o_lval(key, tmp);
-          value.unserialize(uns);
+            : obj->o_lvalptr(key, tmp, &myType);
+	 
+	    if (!valuePtr) {
+     	        Variant& value = subLen != 0 ?
+                (key.charAt(1) == '*' ?
+                    obj->o_lval(key.substr(subLen), tmp, clsName) :
+                    obj->o_lval(key.substr(subLen), tmp, 
+                         String(key.data() + 1, subLen - 2, AttachLiteral)))
+                : obj->o_lval(key, tmp);
+		value.unserialize(uns);
+	    } else if (myType != KindOfVariant) {
+		if (myType == KindOfArray) {
+		    Array& myArr = *(Array*)valuePtr;
+		    Variant value;
+		    value.unserialize(uns);
+		    myArr = value;
+		} else {
+		    Variant value;
+		    switch (myType) {
+		      case KindOfBoolean:
+			value = *(bool*)valuePtr;
+			break;
+		      case KindOfInt32:
+			value = *(int*)valuePtr;
+			break;
+		      case KindOfInt64:
+			value = *(int64*)valuePtr;
+			break;
+		      case KindOfDouble:
+			value = *(double*)valuePtr;
+			break;
+		      case KindOfString:
+			value = *(String*)valuePtr;
+			break;
+		      case KindOfArray:
+			value = *(Array*)valuePtr;
+			break;
+		      case KindOfObject:
+			value = *(Object*)valuePtr;
+			break;
+		      default:
+			throw Exception("Unknown Type of object seen '%d'",myType);
+		    }
+                    value.unserialize(uns);
+		}
+	    } else {
+	        Variant &value = *(Variant*)valuePtr;
+		value.unserialize(uns);
+	    }
+
         }
       }
       sep = uns->readChar();

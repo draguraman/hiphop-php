@@ -82,6 +82,8 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(setbykey);
   public: bool t_delete(CStrRef key, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(delete);
+  public: bool t_deletebykey(CStrRef key, CStrRef shardKey, int expire = 0);
+  DECLARE_METHOD_INVOKE_HELPERS(deletebykey);
   public: int64 t_increment(CStrRef key, int offset = 1);
   DECLARE_METHOD_INVOKE_HELPERS(increment);
   public: int64 t_decrement(CStrRef key, int offset = 1);

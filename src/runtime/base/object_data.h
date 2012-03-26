@@ -181,6 +181,8 @@ class ObjectData : public CountableNF {
   virtual Array o_toArray() const;
   virtual Array o_toIterArray(CStrRef context, bool getRef = false);
   virtual Array o_getDynamicProperties() const;
+  void *o_realPropPtr(CStrRef propName, int flags, DataType *retType, bool forceVariant,
+                                CStrRef context /* = null_string */)  const;
   Variant *o_realProp(CStrRef s, int flags,
                       CStrRef context = null_string) const;
   Variant *o_realPropPublic(CStrRef s, int flags) const;
@@ -208,6 +210,10 @@ class ObjectData : public CountableNF {
   Variant o_setPublicWithRef(CStrRef s, CVarRef v);
 
   Variant &o_lval(CStrRef s, CVarRef tmpForGet, CStrRef context = null_string);
+  Variant &o_lvalSecondHalf(CStrRef propName, CVarRef tmpForGet,
+                            CStrRef context = null_string );
+  void* o_lvalptr(CStrRef propName, CVarRef tmpForGet, DataType *retType,
+                            CStrRef context = null_string );
   Variant &o_unsetLval(CStrRef s, CVarRef tmpForGet,
                        CStrRef context = null_string) {
     return o_lval(s, tmpForGet, context);

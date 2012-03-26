@@ -2064,6 +2064,7 @@ extern const int64 k_XSD_UNSIGNEDLONG;
 extern const int64 k_XSD_UNSIGNEDSHORT;
 extern const int64 k_YESEXPR;
 extern const bool k_ZEND_THREAD_SAFE;
+extern const bool k_RUNNING_HIPHOP;
 
 
 // Get Constant Table
@@ -2089,7 +2090,7 @@ public:
   hashNodeCon *next;
 };
 static hashNodeCon *conMapTable[8192];
-static hashNodeCon conBuckets[2110];
+static hashNodeCon conBuckets[2111];
 
 void init_builtin_constant_table() {
   const char *conMapData[] = {
@@ -3455,6 +3456,7 @@ void init_builtin_constant_table() {
       (const char *)"PSFS_FLAG_NORMAL", (const char *)-1, (const char *)32, (const char *)&k_PSFS_FLAG_NORMAL,
       (const char *)"PSFS_PASS_ON", (const char *)-1, (const char *)32, (const char *)&k_PSFS_PASS_ON,
       (const char *)"RADIXCHAR", (const char *)-1, (const char *)32, (const char *)&k_RADIXCHAR,
+      (const char *)"RUNNING_HIPHOP", (const char *)-1, (const char *)2, (const char *)&k_RUNNING_HIPHOP,
       (const char *)"SA_ALL", (const char *)-1, (const char *)32, (const char *)&k_SA_ALL,
       (const char *)"SA_MESSAGES", (const char *)-1, (const char *)32, (const char *)&k_SA_MESSAGES,
       (const char *)"SA_RECENT", (const char *)-1, (const char *)32, (const char *)&k_SA_RECENT,

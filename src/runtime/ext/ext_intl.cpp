@@ -565,6 +565,7 @@ Variant c_Locale::t___destruct() {
 }
 
 String c_Locale::ti_acceptfromhttp(const char* cls , CStrRef header) {
+  STATIC_METHOD_INJECTION_BUILTIN(Locale, Locale::acceptfromhttp);
   //http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
   //Accept-Language: en-ca,en;q=0.8,en-us;q=0.6,de-de;q=0.4,de;q=0.2
   /*
