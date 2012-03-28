@@ -29,6 +29,7 @@ extern const int64 q_Collator$$SORT_REGULAR;
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
+String f__(CStrRef message);
 int64 f_intl_get_error_code();
 String f_intl_get_error_message();
 String f_intl_error_name(int64 error_code);

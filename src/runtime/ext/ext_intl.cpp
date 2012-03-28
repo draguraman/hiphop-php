@@ -33,6 +33,10 @@ namespace HPHP {
 IMPLEMENT_DEFAULT_EXTENSION(idn);
 ///////////////////////////////////////////////////////////////////////////////
 
+String f__(CStrRef message) {
+  return message;
+}
+
 int64 f_intl_get_error_code() {
   return s_intl_error->m_error.code;
 }

@@ -35,6 +35,11 @@ IMPLEMENT_DEFAULT_EXTENSION(memcache);
 bool ini_on_update_hash_strategy(CStrRef value, void *p);
 bool ini_on_update_hash_function(CStrRef value, void *p);
 
+const int64 k_MEMCACHE_COMPRESSED           = MMC_COMPRESSED;
+const int64 k_MEMCACHE_COMPRESSED_LZO       = MMC_COMPRESSED_LZO;
+const int64 k_MEMCACHE_COMPRESSED_BZIP2     = MMC_COMPRESSED_BZIP2;
+const int64 k_MEMCACHE_SERIALIZED_IGBINARY  = MMC_SERIALIZED_IGBINARY;
+
 static int memcache_lzo_enabled = (lzo_init() == LZO_E_OK)? 1: 0;
 
 lzo_align_t __LZO_MMODEL lzo_wmem[ ((LZO1X_1_MEM_COMPRESS) + (sizeof(lzo_align_t) - 1)) / sizeof(lzo_align_t) ];
@@ -691,7 +696,6 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 
 Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRefParam flags /*= null*/, VRefParam cas /*= null*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::getbykey);
-
   memcached_result_st result;
   const char* key_ptr = key.c_str();
   size_t key_length = key.size();
@@ -759,7 +763,6 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
 
 bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expire /*= 0*/, VRefParam cas /*= null*/, CStrRef shardKey /*= null*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::setbykey);
-
   memcached_return_t status;
 
   String serialized = memcache_prepare_for_storage(val, flag);

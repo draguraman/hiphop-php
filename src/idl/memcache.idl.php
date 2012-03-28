@@ -49,6 +49,30 @@ CPP
 //      )
 // )
 
+DefineConstant(
+  array(
+    'name'   => "MEMCACHE_COMPRESSED",
+    'type'   => Int64,
+  ));
+  
+DefineConstant(
+  array(
+    'name'   => "MEMCACHE_COMPRESSED_LZO",
+    'type'   => Int64,
+  ));
+  
+DefineConstant(
+  array(
+    'name'   => "MEMCACHE_COMPRESSED_BZIP2",
+    'type'   => Int64,
+  ));
+  
+DefineConstant(
+  array(
+    'name'   => "MEMCACHE_SERIALIZED_IGBINARY",
+    'type'   => Int64,
+  ));
+
 DefineFunction(
   array(
     'name'   => "memcache_connect",

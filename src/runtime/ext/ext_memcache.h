@@ -46,6 +46,10 @@ Array f_memcache_get_stats(CObjRef memcache, CStrRef type = null_string, int sla
 Array f_memcache_get_extended_stats(CObjRef memcache, CStrRef type = null_string, int slabid = 0, int limit = 100);
 bool f_memcache_set_server_params(CObjRef memcache, CStrRef host, int port = 11211, int timeout = 0, int retry_interval = 0, bool status = true, CVarRef failure_callback = null_variant);
 bool f_memcache_add_server(CObjRef memcache, CStrRef host, int port = 11211, bool persistent = false, int weight = 0, int timeout = 0, int retry_interval = 0, bool status = true, CVarRef failure_callback = null_variant, int timeoutms = 0);
+extern const int64 k_MEMCACHE_COMPRESSED;
+extern const int64 k_MEMCACHE_COMPRESSED_LZO;
+extern const int64 k_MEMCACHE_COMPRESSED_BZIP2;
+extern const int64 k_MEMCACHE_SERIALIZED_IGBINARY;
 
 ///////////////////////////////////////////////////////////////////////////////
 // class Memcache

@@ -55,6 +55,25 @@ CPP
 
 DefineFunction(
   array(
+    'name'   => "_",
+    'desc'   => "Dummy replacement for gettext _()",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => String,
+      'desc'   => "The translated string.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "message",
+        'type'   => String,
+        'desc'   => "String to be translated.",
+      ),
+    ),
+    'taint_observer' => false,
+  ));
+
+DefineFunction(
+  array(
     'name'   => "intl_get_error_code",
     'desc'   => "Useful to handle errors occurred in static methods when there's no object to get error code from.",
     'flags'  =>  HasDocComment,
