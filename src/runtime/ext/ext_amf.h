@@ -1,3 +1,19 @@
+/*
+   +----------------------------------------------------------------------+
+   | HipHop for PHP                                                       |
+   +----------------------------------------------------------------------+
+   | Copyright (c) 2010- Facebook, Inc. (http://www.facebook.com)         |
+   | Copyright (c) 1997-2010 The PHP Group                                |
+   +----------------------------------------------------------------------+
+   | This source file is subject to version 3.01 of the PHP license,      |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+   | http://www.php.net/license/3_01.txt                                  |
+   | If you did not receive a copy of the PHP license and are unable to   |
+   | obtain it through the world-wide-web, please send a note to          |
+   | license@php.net so we can mail you a copy immediately.               |
+   +----------------------------------------------------------------------+
+*/
 
 #ifndef __EXT_AMF_H__
 #define __EXT_AMF_H__
@@ -9,8 +25,23 @@
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
-String f_amf_encode(VRefParam var, VRefParam flag = null, VRefParam callback = null, VRefParam output = null);
-Variant f_amf_decode(CStrRef var, VRefParam flag = null, VRefParam offset = null);
+#define E_ERROR                         (1<<0L)
+#define E_WARNING                       (1<<1L)
+#define E_PARSE                         (1<<2L)
+#define E_NOTICE                        (1<<3L)
+#define E_CORE_ERROR            (1<<4L)
+#define E_CORE_WARNING          (1<<5L)
+#define E_COMPILE_ERROR         (1<<6L)
+#define E_COMPILE_WARNING       (1<<7L)
+#define E_USER_ERROR            (1<<8L)
+#define E_USER_WARNING          (1<<9L)
+#define E_USER_NOTICE           (1<<10L)
+#define E_STRICT                        (1<<11L)
+#define E_RECOVERABLE_ERROR     (1<<12L)
+
+
+String f_amf_encode(CVarRef var, CVarRef flag = null, CVarRef callback = null, CVarRef output = null);
+Variant f_amf_decode(CStrRef var, CVarRef flag = null, CVarRef offset = null, CVarRef callback = null);
 
 ///////////////////////////////////////////////////////////////////////////////
 }

@@ -61,24 +61,24 @@ DefineFunction(
     'args'   => array(
       array(
         'name'   => "var",
-        'type'   => Variant | Reference,
+        'type'   => Variant ,
         'desc'   => "The variable to encode",
       ),
       array(
         'name'   => "flag",
-        'type'   => Variant | Reference,
+        'type'   => Variant ,
         'desc'   => "The flag",
 	'value'  => "null",
       ),
       array(
         'name'   => "callback",
-        'type'   => Variant | Reference,
+        'type'   => Variant ,
         'desc'   => "call back",
 	'value'  => "null",
       ),
       array(
         'name'   => "output",
-        'type'   => Variant| Reference,
+        'type'   => Variant,
         'desc'   => "output",
 	'value'  => "null",
       ),
@@ -106,23 +106,22 @@ DefineFunction(
       ),
       array(
         'name'   => "flag",
-        'type'   => Variant | Reference,
+        'type'   => Variant ,
         'desc'   => "The flag",
         'value'  => "null",
       ),
       array(
         'name'   => "offset",
-        'type'   => Variant| Reference,
+        'type'   => Variant,
         'desc'   => "offset",
         'value'  => "null",
+      ),
       array(
         'name'   => "callback",
-        'type'   => Variant | Reference,
+        'type'   => Variant ,
         'desc'   => "call back",
         'value'  => "null",
       ),
-      ),
-
     ),
     'taint_observer' => array(
       'set_mask'   => "TAINT_BIT_NONE",
