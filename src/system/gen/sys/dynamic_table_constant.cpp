@@ -2090,7 +2090,7 @@ public:
   hashNodeCon *next;
 };
 static hashNodeCon *conMapTable[8192];
-static hashNodeCon conBuckets[2111];
+static hashNodeCon conBuckets[2115];
 
 void init_builtin_constant_table() {
   const char *conMapData[] = {
@@ -2838,6 +2838,10 @@ void init_builtin_constant_table() {
       (const char *)"MCRYPT_TWOFISH", (const char *)-1, (const char *)128, (const char *)&k_MCRYPT_TWOFISH,
       (const char *)"MCRYPT_WAKE", (const char *)-1, (const char *)128, (const char *)&k_MCRYPT_WAKE,
       (const char *)"MCRYPT_XTEA", (const char *)-1, (const char *)128, (const char *)&k_MCRYPT_XTEA,
+      (const char *)"MEMCACHE_COMPRESSED", (const char *)-1, (const char *)32, (const char *)&k_MEMCACHE_COMPRESSED,
+      (const char *)"MEMCACHE_COMPRESSED_BZIP2", (const char *)-1, (const char *)32, (const char *)&k_MEMCACHE_COMPRESSED_BZIP2,
+      (const char *)"MEMCACHE_COMPRESSED_LZO", (const char *)-1, (const char *)32, (const char *)&k_MEMCACHE_COMPRESSED_LZO,
+      (const char *)"MEMCACHE_SERIALIZED_IGBINARY", (const char *)-1, (const char *)32, (const char *)&k_MEMCACHE_SERIALIZED_IGBINARY,
       (const char *)"MON_1", (const char *)-1, (const char *)32, (const char *)&k_MON_1,
       (const char *)"MON_10", (const char *)-1, (const char *)32, (const char *)&k_MON_10,
       (const char *)"MON_11", (const char *)-1, (const char *)32, (const char *)&k_MON_11,

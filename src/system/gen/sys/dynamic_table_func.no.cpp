@@ -17524,6 +17524,14 @@ Variant ifa_magickoilpaintimage(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARG
 Variant i_magickoilpaintimage(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_magickoilpaintimage);
 }
+Variant ifa__(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 1)) return throw_wrong_arguments("_", count, 1, 1, 1);
+  CVarRef arg0(a0);
+  return (x__(arg0));
+}
+Variant i__(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa__);
+}
 Variant ifa_magickmapimage(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 3)) return throw_wrong_arguments("magickmapimage", count, 3, 3, 1);
   CVarRef arg0(a0);
@@ -19095,6 +19103,14 @@ Variant ifa_magicksetimageblueprimary(void *extra, int count, INVOKE_FEW_ARGS_IM
 Variant i_magicksetimageblueprimary(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_magicksetimageblueprimary);
 }
+Variant ifa_drawgetstrokeantialias(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 1)) return throw_wrong_arguments("drawgetstrokeantialias", count, 1, 1, 1);
+  CVarRef arg0(a0);
+  return (x_drawgetstrokeantialias(arg0));
+}
+Variant i_drawgetstrokeantialias(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_drawgetstrokeantialias);
+}
 Variant ifa_session_module_name(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count > 1)) return throw_toomany_arguments("session_module_name", 1, 1);
   if (count <= 0) return (x_session_module_name());
@@ -19103,14 +19119,6 @@ Variant ifa_session_module_name(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARG
 }
 Variant i_session_module_name(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_session_module_name);
-}
-Variant ifa_drawgetstrokeantialias(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
-  if (UNLIKELY(count != 1)) return throw_wrong_arguments("drawgetstrokeantialias", count, 1, 1, 1);
-  CVarRef arg0(a0);
-  return (x_drawgetstrokeantialias(arg0));
-}
-Variant i_drawgetstrokeantialias(void *extra, CArrRef params) {
-  return invoke_func_few_handler(extra, params, &ifa_drawgetstrokeantialias);
 }
 Variant ifa_checkdnsrr(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count < 1 || count > 2)) return throw_wrong_arguments("checkdnsrr", count, 1, 2, 1);
@@ -23136,6 +23144,7 @@ CallInfo ci_mysql_next_result((void*)&i_mysql_next_result, (void*)&ifa_mysql_nex
 CallInfo ci_magickgetversion((void*)&i_magickgetversion, (void*)&ifa_magickgetversion, 0, 0, 0x0000000000000000LL);
 CallInfo ci_dom_document_create_element_ns((void*)&i_dom_document_create_element_ns, (void*)&ifa_dom_document_create_element_ns, 4, 0, 0x0000000000000000LL);
 CallInfo ci_magickoilpaintimage((void*)&i_magickoilpaintimage, (void*)&ifa_magickoilpaintimage, 2, 0, 0x0000000000000000LL);
+CallInfo ci__((void*)&i__, (void*)&ifa__, 1, 0, 0x0000000000000000LL);
 CallInfo ci_magickmapimage((void*)&i_magickmapimage, (void*)&ifa_magickmapimage, 3, 0, 0x0000000000000000LL);
 CallInfo ci_ldap_first_attribute((void*)&i_ldap_first_attribute, (void*)&ifa_ldap_first_attribute, 2, 0, 0x0000000000000000LL);
 CallInfo ci_lcg_value((void*)&i_lcg_value, (void*)&ifa_lcg_value, 0, 0, 0x0000000000000000LL);
@@ -23296,8 +23305,8 @@ CallInfo ci_mb_eregi_replace((void*)&i_mb_eregi_replace, (void*)&ifa_mb_eregi_re
 CallInfo ci_imagegammacorrect((void*)&i_imagegammacorrect, (void*)&ifa_imagegammacorrect, 3, 0, 0x0000000000000000LL);
 CallInfo ci_magicksetimageresolution((void*)&i_magicksetimageresolution, (void*)&ifa_magicksetimageresolution, 3, 0, 0x0000000000000000LL);
 CallInfo ci_magicksetimageblueprimary((void*)&i_magicksetimageblueprimary, (void*)&ifa_magicksetimageblueprimary, 3, 0, 0x0000000000000000LL);
-CallInfo ci_session_module_name((void*)&i_session_module_name, (void*)&ifa_session_module_name, 1, 0, 0x0000000000000000LL);
 CallInfo ci_drawgetstrokeantialias((void*)&i_drawgetstrokeantialias, (void*)&ifa_drawgetstrokeantialias, 1, 0, 0x0000000000000000LL);
+CallInfo ci_session_module_name((void*)&i_session_module_name, (void*)&ifa_session_module_name, 1, 0, 0x0000000000000000LL);
 CallInfo ci_checkdnsrr((void*)&i_checkdnsrr, (void*)&ifa_checkdnsrr, 2, 0, 0x0000000000000000LL);
 CallInfo ci_apc_filehits((void*)&i_apc_filehits, (void*)&ifa_apc_filehits, 0, 0, 0x0000000000000000LL);
 CallInfo ci_bcpowmod((void*)&i_bcpowmod, (void*)&ifa_bcpowmod, 4, 0, 0x0000000000000000LL);
@@ -35800,6 +35809,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 8130:
       HASH_GUARD(0x460470C490FAFFC2LL, dom_node_normalize) {
         ci = &ci_dom_node_normalize;
+        return true;
+      }
+      break;
+    case 8141:
+      HASH_GUARD(0x2F9338337F06FFCDLL, _) {
+        ci = &ci__;
         return true;
       }
       break;

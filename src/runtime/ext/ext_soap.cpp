@@ -38,6 +38,7 @@ IMPLEMENT_DEFAULT_EXTENSION(soap);
 ///////////////////////////////////////////////////////////////////////////////
 // helper classes for setting/resetting globals within a method call
 
+
 class SoapScope {
 public:
   SoapScope() {

@@ -22,7 +22,6 @@
 #include <runtime/ext/ext_function.h>
 
 #include <system/lib/systemlib.h>
-
 #define DOM_XMLNS_NAMESPACE                             \
   (const xmlChar *) "http://www.w3.org/2000/xmlns/"
 

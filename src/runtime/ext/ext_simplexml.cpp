@@ -21,13 +21,12 @@
 #include <runtime/base/util/request_local.h>
 
 #include <system/lib/systemlib.h>
-#include <malloc.h>
-#include <libxml2/libxml/xmlmemory.h>
 namespace HPHP {
 IMPLEMENT_DEFAULT_EXTENSION(SimpleXML);
 ///////////////////////////////////////////////////////////////////////////////
 
 Mutex s_simplexml_lock;
+
 int s_simplexml_count=0;
 // This is to make sure each node holds one reference of m_doc, so not to let
 // it go out of scope.
@@ -46,7 +45,7 @@ public:
     if (m_doc) {
       Lock lock(s_simplexml_lock);
       xmlFreeDoc(m_doc);
-      xmlCleanupParser();
+      //xmlCleanupParser();
       s_simplexml_count++;
       if (s_simplexml_count > 3) {
 	      s_simplexml_count = 0;
@@ -937,6 +936,9 @@ void c_SimpleXMLElement::__attach_attributes() {
 }
 
 bool c_SimpleXMLElement::o_toBoolean() const {
+  if (m_is_text) {
+      return false;
+  }
   return m_node != NULL || o_properties.size();
 }
 
@@ -991,6 +993,9 @@ int64 c_SimpleXMLElement::t_count() {
       ++n;
     }
     return n;
+  }
+  if (m_is_text) {
+      return 0;
   }
   return m_children.toArray().size();
 }

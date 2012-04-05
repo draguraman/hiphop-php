@@ -26,6 +26,7 @@ using namespace boost;
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
+
 bool php_libxml_xmlCheckUTF8(const unsigned char *s) {
   int i;
   unsigned char c;

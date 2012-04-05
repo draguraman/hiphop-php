@@ -25,6 +25,11 @@
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
+inline String x__(CStrRef message) {
+  FUNCTION_INJECTION_BUILTIN(_);
+  return f__(message);
+}
+
 inline int64 x_intl_get_error_code() {
   FUNCTION_INJECTION_BUILTIN(intl_get_error_code);
   return f_intl_get_error_code();

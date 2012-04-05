@@ -122,7 +122,7 @@ TypePtr QOpExpression::inferTypes(AnalysisResultPtr ar, TypePtr type,
     m_condition->inferAndCheck(ar, Type::Boolean, false);
     TypePtr typeYes = m_expYes->inferAndCheck(ar, Type::Some, coerce);
     TypePtr typeNo = m_expNo->inferAndCheck(ar, Type::Some, coerce);
-    if (Type::SameType(typeYes, typeNo) &&
+    if (Type::SameType(typeYes, typeNo) && 
         m_expYes->isLiteralString() == m_expNo->isLiteralString()) {
       // already the same type, no coercion needed
       // special case on literal string since String is slower than Variant
@@ -311,8 +311,8 @@ void QOpExpression::outputCPPImpl(CodeGenerator &cg, AnalysisResultPtr ar) {
       const char *castType =
         typeYes && typeNo && Type::SameType(typeYes, typeNo) &&
         !typeYes->is(Type::KindOfVariant) &&
-        expYes->isLiteralString() == m_expNo->isLiteralString()
-        ? "" : "(Variant)";
+	expYes->isLiteralString() == m_expNo->isLiteralString()
+        ? ((typeYes->is(Type::KindOfString))?"(String)":"") : "(Variant)";
 
       cg_printf(" ? (%s(", castType);
       expYes->outputCPP(cg, ar);
