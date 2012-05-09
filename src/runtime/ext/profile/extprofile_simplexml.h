@@ -25,6 +25,12 @@
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
+inline Variant x_simplexml_import_dom(CObjRef dom, CStrRef class_name = "SimpleXMLElement") {
+  FUNCTION_INJECTION_BUILTIN(simplexml_import_dom);
+  TAINT_OBSERVER(TAINT_BIT_NONE, TAINT_BIT_NONE);
+  return f_simplexml_import_dom(dom, class_name);
+}
+
 inline Variant x_simplexml_load_string(CStrRef data, CStrRef class_name = "SimpleXMLElement", int64 options = 0, CStrRef ns = "", bool is_prefix = false) {
   FUNCTION_INJECTION_BUILTIN(simplexml_load_string);
   TAINT_OBSERVER(TAINT_BIT_NONE, TAINT_BIT_NONE);

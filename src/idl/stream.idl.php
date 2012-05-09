@@ -583,7 +583,7 @@ DefineFunction(
     ),
   ));
 
-DefineFunction(
+/*DefineFunction(
   array(
     'name'   => "stream_resolve_include_path",
     'desc'   => "Resolve filename against the include path according to the same rules as fopen()/include() does.",
@@ -605,7 +605,7 @@ DefineFunction(
         'desc'   => "A valid context resource created with stream_context_create().",
       ),
     ),
-  ));
+  ));*/
 
 DefineFunction(
   array(

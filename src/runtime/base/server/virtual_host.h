@@ -39,6 +39,9 @@ public:
   VirtualHost();
   VirtualHost(Hdf vh);
 
+  const std::map<std::string,std::string> &getLinkRewrite() const {
+    return m_linkRewrite;
+  }
   void init(Hdf vh);
   void setRequestTimeoutSeconds() const;
 
@@ -106,6 +109,7 @@ private:
 
   std::string m_serverName;
   std::map<std::string, std::string> m_serverVars;
+  std::map<std::string, std::string> m_linkRewrite;
   std::string m_pathTranslation;
   std::string m_documentRoot;
 

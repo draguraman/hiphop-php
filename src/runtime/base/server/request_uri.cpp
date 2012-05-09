@@ -62,7 +62,26 @@ RequestURI::RequestURI(const std::string rpcFunc)
   :  m_rewritten(false), m_defaultDoc(false), m_done(false) {
   m_originalURL = m_rewrittenURL = m_resolvedURL = String(rpcFunc);
 }
-
+  bool RequestURI::checkForLink(const VirtualHost *vhost, String &relUrl) {
+    std::string data(relUrl.data());
+    const std::map<std::string, std::string> &linkRewrite = (*vhost).getLinkRewrite();
+    for (std::map<std::string,std::string>::const_iterator i = linkRewrite.begin(); i !=  linkRewrite.end();i++) {
+      int found = data.find(i->first);
+      if (found == 0) { //link paths are absolute
+	if (i->second[0] == '/') {
+	  data.replace(0,i->first.size(),i->second); 
+	} else {
+	  int lastSlash = i->first.find_last_of('/',i->first.size() - 1);
+	  data.replace(lastSlash+1,i->first.size()-lastSlash-1,i->second);
+	}
+	data = Util::canonicalize(string(data.c_str(),
+                                           data.size()));
+	relUrl = data;
+	return true;
+      }
+    }
+    return false;
+  }
 bool RequestURI::process(const VirtualHost *vhost, Transport *transport,
                          const string &sourceRoot,
                          const string &pathTranslation, const char *url) {
@@ -79,7 +98,6 @@ bool RequestURI::process(const VirtualHost *vhost, Transport *transport,
     PrependSlash(m_resolvedURL);
     return true;
   }
-
   if (!rewriteURL(vhost, transport, pathTranslation, sourceRoot)) {
     // Redirection
     m_done = true;
@@ -219,6 +237,7 @@ bool RequestURI::virtualFileExists(const VirtualHost *vhost,
     }
     m_path = fullname;
     m_absolutePath = String(sourceRoot) + m_path;
+    checkForLink(vhost,m_absolutePath);
     processExt();
 
     if (StaticContentCache::TheFileCache && !fullname.empty() &&

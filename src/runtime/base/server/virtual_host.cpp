@@ -214,6 +214,14 @@ void VirtualHost::init(Hdf vh) {
   }
 
   vh["ServerVariables"].get(m_serverVars);
+  Hdf linkRewrites = vh["LinkRewrites"];
+  for (Hdf hdf = linkRewrites.firstChild(); hdf.exists(); hdf = hdf.next()) {
+    if (hdf["name"].getString()[0] != '/') {
+        throw InvalidArgumentException("link rewrite rule", "Cannot allow non-absolute link path for rewrite:");
+    	continue;
+    }
+    m_linkRewrite[hdf["name"].getString()] = hdf["rep"].getString();
+  }
   m_serverName = vh["ServerName"].getString();
 }
 

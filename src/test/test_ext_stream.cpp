@@ -51,7 +51,7 @@ bool TestExtStream::RunTests(const std::string &which) {
   RUN_TEST(test_stream_wrapper_register);
   RUN_TEST(test_stream_wrapper_restore);
   RUN_TEST(test_stream_wrapper_unregister);
-  RUN_TEST(test_stream_resolve_include_path);
+  /*RUN_TEST(test_stream_resolve_include_path);*/
   RUN_TEST(test_stream_select);
   RUN_TEST(test_stream_set_blocking);
   RUN_TEST(test_stream_set_timeout);
@@ -333,14 +333,14 @@ bool TestExtStream::test_stream_wrapper_unregister() {
   return Count(false);
 }
 
-bool TestExtStream::test_stream_resolve_include_path() {
+/*bool TestExtStream::test_stream_resolve_include_path() {
   try {
     f_stream_resolve_include_path("");
   } catch (NotSupportedException e) {
     return Count(true);
   }
   return Count(false);
-}
+}*/
 
 bool TestExtStream::test_stream_select() {
   Variant f = f_fopen("test/test_ext_file.txt", "r");

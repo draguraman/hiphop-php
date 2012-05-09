@@ -42,6 +42,7 @@ public:
   CStrRef absolutePath() const { return m_absolutePath; }
   CStrRef pathInfo() const { return m_pathInfo; }
 
+  bool checkForLink(const VirtualHost *vhost, String &relUrl);
   bool rewritten() const { return m_rewritten; }
   bool defaultDoc() const { return m_defaultDoc; }
   bool done() const { return m_done; }

@@ -149,10 +149,10 @@ inline bool f_stream_wrapper_unregister(CStrRef protocol) {
   throw NotSupportedException(__func__, "stream protocol is not supported");
 }
 
-inline String f_stream_resolve_include_path(CStrRef filename,
+/*inline String f_stream_resolve_include_path(CStrRef filename,
                                             CObjRef context = null_object) {
   throw NotSupportedException(__func__, "include path is not supported");
-}
+}*/
 
 Variant f_stream_select(VRefParam read, VRefParam write, VRefParam except,
                         CVarRef vtv_sec, int tv_usec = 0);

@@ -150,11 +150,6 @@ inline bool x_stream_wrapper_unregister(CStrRef protocol) {
   return f_stream_wrapper_unregister(protocol);
 }
 
-inline String x_stream_resolve_include_path(CStrRef filename, CObjRef context = null_object) {
-  FUNCTION_INJECTION_BUILTIN(stream_resolve_include_path);
-  return f_stream_resolve_include_path(filename, context);
-}
-
 inline Variant x_stream_select(VRefParam read, VRefParam write, VRefParam except, CVarRef vtv_sec, int tv_usec = 0) {
   FUNCTION_INJECTION_BUILTIN(stream_select);
   return f_stream_select(read, write, except, vtv_sec, tv_usec);

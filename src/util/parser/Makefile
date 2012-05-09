@@ -2,7 +2,7 @@
 PROJECT_ROOT = ../../..
 
 export \
-BISON_PKGDATADIR=$(realpath $(PROJECT_ROOT))/external-centos/bison/share/bison
+BISON_PKGDATADIR=/usr/share/bison
 
 all: lex.yy.cpp
 	$(MAKE) -C $(PROJECT_ROOT)/src/compiler/parser
@@ -12,7 +12,7 @@ all: lex.yy.cpp
 .PHONY: lex.yy.cpp
 lex.yy.cpp: hphp.x
 	@echo "Generating scanner code..."
-	$(V)$(EXT_DIR)/flex/bin/flex -i -f -Phphp -R -8 --bison-locations \
+	/usr/bin/flex -i -f -Phphp -R -8 --bison-locations \
 		-o$@ $<
 
 include $(PROJECT_ROOT)/src/rules.mk

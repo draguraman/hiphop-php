@@ -52,7 +52,7 @@ class TestExtStream : public TestCppExt {
   bool test_stream_wrapper_register();
   bool test_stream_wrapper_restore();
   bool test_stream_wrapper_unregister();
-  bool test_stream_resolve_include_path();
+  /*bool test_stream_resolve_include_path();*/
   bool test_stream_select();
   bool test_stream_set_blocking();
   bool test_stream_set_timeout();

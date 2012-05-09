@@ -48,6 +48,34 @@ CPP
 //        'desc'  => description of the argument
 //      )
 // )
+DefineFunction(
+  array(
+    'name'   => "simplexml_import_dom",
+    'desc'   => "Takes a well-formed XML string and returns it as an object.",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Variant,
+      'desc'   => "Returns an object of class SimpleXMLElement with properties containing the data held within the xml document. On errors, it will return FALSE.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "dom",
+        'type'   => Object,
+        'desc'   => "A well-formed XML string",
+      ),
+      array(
+        'name'   => "class_name",
+        'type'   => String,
+        'value'  => "\"SimpleXMLElement\"",
+        'desc'   => "You may use this optional parameter so that simplexml_load_string() will return an object of the specified class. That class should extend the SimpleXMLElement class.",
+      )
+    ),
+    'taint_observer' => array(
+      'set_mask'   => "TAINT_BIT_NONE",
+      'clear_mask' => "TAINT_BIT_NONE",
+    ),
+  ));
+
 
 DefineFunction(
   array(

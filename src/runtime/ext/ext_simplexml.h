@@ -24,7 +24,7 @@
 #include <runtime/ext/ext_simplexml_include.h>
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
-
+Variant f_simplexml_import_dom(CObjRef dom, CStrRef class_name = "SimpleXMLElement");
 Variant f_simplexml_load_string(CStrRef data, CStrRef class_name = "SimpleXMLElement", int64 options = 0, CStrRef ns = "", bool is_prefix = false);
 Variant f_simplexml_load_file(CStrRef filename, CStrRef class_name = "SimpleXMLElement", int64 options = 0, CStrRef ns = "", bool is_prefix = false);
 Variant f_libxml_get_errors();

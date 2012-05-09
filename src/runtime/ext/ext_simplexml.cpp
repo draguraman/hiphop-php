@@ -17,6 +17,7 @@
 
 #include <runtime/ext/ext_simplexml.h>
 #include <runtime/ext/ext_file.h>
+#include <runtime/ext/ext_domdocument.h>
 #include <runtime/base/class_info.h>
 #include <runtime/base/util/request_local.h>
 
@@ -194,15 +195,18 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
     if (node->type != XML_ELEMENT_NODE || match_ns(node, ns, is_prefix)) {
       xmlNodePtr child = node->children;
       Object sub;
-      if (child && child->type == XML_TEXT_NODE && !xmlIsBlankNode(child)) {
+      if (child && child->type == XML_TEXT_NODE && !xmlIsBlankNode(child) && !child->next) {
         sub = create_text(doc, child, node_list_to_string(root->doc, child),
                           ns, is_prefix, false);
       } else {
+        if (node->type == XML_COMMENT_NODE) {
+		continue;
+	}
         sub = create_element(doc, node, ns, is_prefix);
       }
       add_property(properties, node, sub);
+    }   
     }
-  }
   return properties;
 }
 
@@ -250,6 +254,27 @@ static void add_registered_namespaces(Array &out, xmlNodePtr node,
 // simplexml
 
 static StaticString s_SimpleXMLElement("SimpleXMLElement");
+
+Variant f_simplexml_import_dom(CObjRef dom, CStrRef class_name /* = "SimpleXMLElement" */) {
+  if (!class_name->isame(s_SimpleXMLElement.get())&& !class_name.empty()) {
+    if (class_name.empty()) {
+      throw_invalid_argument("class_name: [empty]");
+    }
+    const ClassInfo *cls = ClassInfo::FindClass(class_name);
+    if (cls == NULL) {
+      throw_invalid_argument("class not found: %s", class_name.data());
+      return null;
+    }
+    if (!cls->derivesFrom(s_SimpleXMLElement, false)) {
+      throw_invalid_argument("not subclass of SimpleXMLElement: %s",
+                             class_name.data());
+      return null;
+    }
+  }
+  c_DOMDocument *ddom = dom.getTyped<c_DOMDocument>();
+  CVarRef vdomstr = ddom->t_savexml();
+  return f_simplexml_load_string(vdomstr,class_name);
+  }
 
 Variant f_simplexml_load_string(CStrRef data,
                                 CStrRef class_name /* = "SimpleXMLElement" */,
@@ -349,7 +374,7 @@ void c_SimpleXMLElement::t___construct(CStrRef data, int64 options /* = 0 */,
   xmlDocPtr doc; 
   {
   Lock lock(s_simplexml_lock);
-  doc = xmlReadMemory(data.data(), data.size(), NULL, NULL, options);
+  doc = xmlReadMemory(xml.data(), xml.size(), NULL, NULL, options);
   }
 
   if (doc) {
@@ -800,6 +825,17 @@ Variant c_SimpleXMLElement::t___get(Variant name) {
     e->m_is_property = true;
     return e;
   }
+  if (ret.isString()) {
+    c_SimpleXMLElement *e = NEWOBJ(c_SimpleXMLElement)();
+    e->m_doc = this->m_doc; 
+    e->m_node = this->m_node;
+    e->m_children.set(0,ret);
+    e->m_array.set(0,ret);
+    e->m_is_text = this->m_is_text;
+    e->m_is_attribute = this->m_is_attribute;
+    e->m_is_property = true;
+    return e;
+  }
   if (ret.isNull()) {
     return NEWOBJ(c_SimpleXMLElement)();
   }
@@ -939,6 +975,7 @@ bool c_SimpleXMLElement::o_toBoolean() const {
   if (m_is_text) {
       return false;
   }
+
   return m_node != NULL || o_properties.size();
 }
 
@@ -997,7 +1034,17 @@ int64 c_SimpleXMLElement::t_count() {
   if (m_is_text) {
       return 0;
   }
-  return m_children.toArray().size();
+  {
+  int64 n = 0;
+  for (ArrayIter iter = m_children.begin(); !iter.end(); iter.next()) {
+	if (iter.second().isArray()) {
+		n+=iter.second().toArray().size();	
+	} else {
+		++n;
+	}
+  }      
+  return n;
+  }
 }
 
 Variant c_SimpleXMLElement::t___destruct() {

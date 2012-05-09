@@ -2874,16 +2874,6 @@ Variant ifa_drawsetfontfamily(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS)
 Variant i_drawsetfontfamily(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_drawsetfontfamily);
 }
-Variant ifa_stream_resolve_include_path(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
-  if (UNLIKELY(count < 1 || count > 2)) return throw_wrong_arguments("stream_resolve_include_path", count, 1, 2, 1);
-  CVarRef arg0(a0);
-  if (count <= 1) return (x_stream_resolve_include_path(arg0));
-  CVarRef arg1(a1);
-  return (x_stream_resolve_include_path(arg0, arg1));
-}
-Variant i_stream_resolve_include_path(void *extra, CArrRef params) {
-  return invoke_func_few_handler(extra, params, &ifa_stream_resolve_include_path);
-}
 Variant ifa_quotemeta(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 1)) return throw_wrong_arguments("quotemeta", count, 1, 1, 1);
   CVarRef arg0(a0);
@@ -3728,6 +3718,16 @@ Variant ifa_stream_socket_get_name(void *extra, int count, INVOKE_FEW_ARGS_IMPL_
 }
 Variant i_stream_socket_get_name(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_stream_socket_get_name);
+}
+Variant ifa_simplexml_import_dom(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count < 1 || count > 2)) return throw_wrong_arguments("simplexml_import_dom", count, 1, 2, 1);
+  CVarRef arg0(a0);
+  if (count <= 1) return (x_simplexml_import_dom(arg0));
+  CVarRef arg1(a1);
+  return (x_simplexml_import_dom(arg0, arg1));
+}
+Variant i_simplexml_import_dom(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_simplexml_import_dom);
 }
 Variant ifa_array_merge(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count < 1)) return throw_missing_arguments("array_merge", count+1, 1);
@@ -21689,7 +21689,6 @@ CallInfo ci_magickprofileimage((void*)&i_magickprofileimage, (void*)&ifa_magickp
 CallInfo ci_hphpd_get_user_commands((void*)&i_hphpd_get_user_commands, (void*)&ifa_hphpd_get_user_commands, 0, 0, 0x0000000000000000LL);
 CallInfo ci_hphpd_break((void*)&i_hphpd_break, (void*)&ifa_hphpd_break, 1, 0, 0x0000000000000000LL);
 CallInfo ci_drawsetfontfamily((void*)&i_drawsetfontfamily, (void*)&ifa_drawsetfontfamily, 2, 0, 0x0000000000000000LL);
-CallInfo ci_stream_resolve_include_path((void*)&i_stream_resolve_include_path, (void*)&ifa_stream_resolve_include_path, 2, 0, 0x0000000000000000LL);
 CallInfo ci_quotemeta((void*)&i_quotemeta, (void*)&ifa_quotemeta, 1, 0, 0x0000000000000000LL);
 CallInfo ci_exif_imagetype((void*)&i_exif_imagetype, (void*)&ifa_exif_imagetype, 1, 0, 0x0000000000000000LL);
 CallInfo ci_stripslashes((void*)&i_stripslashes, (void*)&ifa_stripslashes, 1, 0, 0x0000000000000000LL);
@@ -21773,6 +21772,7 @@ CallInfo ci_disk_free_space((void*)&i_disk_free_space, (void*)&ifa_disk_free_spa
 CallInfo ci_mysql_affected_rows((void*)&i_mysql_affected_rows, (void*)&ifa_mysql_affected_rows, 1, 0, 0x0000000000000000LL);
 CallInfo ci_sql_regcase((void*)&i_sql_regcase, (void*)&ifa_sql_regcase, 1, 0, 0x0000000000000000LL);
 CallInfo ci_stream_socket_get_name((void*)&i_stream_socket_get_name, (void*)&ifa_stream_socket_get_name, 2, 0, 0x0000000000000000LL);
+CallInfo ci_simplexml_import_dom((void*)&i_simplexml_import_dom, (void*)&ifa_simplexml_import_dom, 2, 0, 0x0000000000000000LL);
 CallInfo ci_array_merge((void*)&i_array_merge, (void*)&ifa_array_merge, 1, 1, 0x0000000000000000LL);
 CallInfo ci_dom_xpath_query((void*)&i_dom_xpath_query, (void*)&ifa_dom_xpath_query, 3, 0, 0x0000000000000000LL);
 CallInfo ci_magickrollimage((void*)&i_magickrollimage, (void*)&ifa_magickrollimage, 3, 0, 0x0000000000000000LL);
@@ -25067,12 +25067,6 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 1069:
       HASH_GUARD(0x2A5A519E4BFE442DLL, mb_eregi) {
         ci = &ci_mb_eregi;
-        return true;
-      }
-      break;
-    case 1071:
-      HASH_GUARD(0x316F2725AC15042FLL, stream_resolve_include_path) {
-        ci = &ci_stream_resolve_include_path;
         return true;
       }
       break;
@@ -35021,6 +35015,10 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 7592:
       HASH_GUARD(0x572AE270D9E4FDA8LL, socket_set_option) {
         ci = &ci_socket_set_option;
+        return true;
+      }
+      HASH_GUARD(0x66748B283D1EBDA8LL, simplexml_import_dom) {
+        ci = &ci_simplexml_import_dom;
         return true;
       }
       break;
