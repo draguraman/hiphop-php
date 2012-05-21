@@ -87,7 +87,7 @@ String File::TranslatePath(CStrRef filename, bool useFileCache /* = false */,
     }
 
     // unresolvable paths are all considered as unsafe
-    if (canonicalized.find("..") >= 0) {
+    if (canonicalized.find("..") >= 0 && !RuntimeOption::IgnoreStatEnabled) {
       ASSERT(canonicalized.find("..") == 0);
       return "";
     }

@@ -39,6 +39,7 @@ namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
 bool RuntimeOption::Loaded = false;
+bool RuntimeOption::IgnoreStatEnabled = false;
 
 const char *RuntimeOption::ExecutionMode = "";
 std::string RuntimeOption::BuildId;
@@ -211,6 +212,7 @@ std::string RuntimeOption::TakeoverFilename;
 int RuntimeOption::AdminServerPort;
 int RuntimeOption::AdminThreadCount = 1;
 std::string RuntimeOption::AdminPassword;
+std::string RuntimeOption::AdminServerIP="localhost"; // added to server admin commands
 std::set<std::string> RuntimeOption::AdminPasswords;
 
 std::string RuntimeOption::ProxyOrigin;
@@ -315,6 +317,7 @@ int RuntimeOption::DnsCacheKeyFrequencyUpdatePeriod = 1000;
 
 std::map<std::string, std::string> RuntimeOption::ServerVariables;
 std::map<std::string, std::string> RuntimeOption::EnvVariables;
+std::map<std::string, std::string> RuntimeOption::ServerLinkRewrites;
 
 std::string RuntimeOption::LightProcessFilePrefix;
 int RuntimeOption::LightProcessCount;
@@ -588,8 +591,13 @@ void RuntimeOption::Load(Hdf &config, StringVec *overwrites /* = NULL */) {
   }
   {
     Hdf server = config["Server"];
+    Hdf linkRewrites = server["LinkRewrites"];
+    for (Hdf hdf = linkRewrites.firstChild(); hdf.exists(); hdf = hdf.next()) {
+        ServerLinkRewrites[hdf["name"]] = hdf["rep"].getString();
+    }
     Host = server["Host"].getString();
     DefaultServerNameSuffix = server["DefaultServerNameSuffix"].getString();
+    IgnoreStatEnabled=server["IgnoreStatEnabled"].getBool(false);
     ServerIP = server["IP"].getString();
     ServerPrimaryIP = Util::GetPrimaryIP();
     ServerPort = server["Port"].getInt16(80);
@@ -894,6 +902,7 @@ void RuntimeOption::Load(Hdf &config, StringVec *overwrites /* = NULL */) {
     AdminServerPort = admin["Port"].getInt16(8088);
     AdminThreadCount = admin["ThreadCount"].getInt32(1);
     AdminPassword = admin["Password"].getString();
+    AdminServerIP = admin["IP"].getString("localhost");
     admin["Passwords"].get(AdminPasswords);
   }
   {

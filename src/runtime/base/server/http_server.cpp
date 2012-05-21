@@ -479,14 +479,15 @@ bool HttpServer::startServer(bool pageServer) {
 
       HttpClient http;
       string url = "http://";
-      url += RuntimeOption::ServerIP;
+      //url += RuntimeOption::ServerIP; // instead we will be using admin server ip
+      url += RuntimeOption::AdminServerIP;
       url += ":";
       url += lexical_cast<string>(RuntimeOption::AdminServerPort);
       url += "/stop";
       StringBuffer response;
       http.get(url.c_str(), response);
 
-      sleep(1);
+      //sleep(1); a comment for ujwal
     }
   }
 

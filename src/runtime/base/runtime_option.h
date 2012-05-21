@@ -83,6 +83,7 @@ public:
   static std::string DefaultServerNameSuffix;
   static std::string ServerIP;
   static std::string ServerPrimaryIP;
+  static std::string AdminServerIP;
   static int ServerPort;
   static int ServerPortFd;
   static int ServerBacklog;
@@ -193,6 +194,7 @@ public:
   static bool SafeFileAccess;
   static std::vector<std::string> AllowedDirectories;
   static std::set<std::string> AllowedFiles;
+  static bool IgnoreStatEnabled;
   static hphp_string_imap<std::string> StaticFileExtensions;
   static std::set<std::string> ForbiddenFileExtensions;
   static std::set<std::string> StaticFileGenerators;
@@ -323,6 +325,8 @@ public:
   static int DnsCacheKeyFrequencyUpdatePeriod;
 
   static std::map<std::string, std::string> ServerVariables;
+
+  static std::map<std::string, std::string> ServerLinkRewrites;
 
   static std::map<std::string, std::string> EnvVariables;
 
