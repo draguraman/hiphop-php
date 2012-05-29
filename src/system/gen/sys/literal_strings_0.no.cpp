@@ -911,6 +911,7 @@ StaticString s_sys_ss66d2232c("\n");
 StaticString s_sys_ss66f43d70("FETCH_ASSOC");
 StaticString s_sys_ss672a5730("css");
 StaticString s_sys_ss6775c5a7("__getlastrequestheaders");
+StaticString s_sys_ss679d525c("getl");
 StaticString s_sys_ss679e8b98("normalize");
 StaticString s_sys_ss685ba94d("lex");
 StaticString s_sys_ss6863d210("schemaValidateSource");

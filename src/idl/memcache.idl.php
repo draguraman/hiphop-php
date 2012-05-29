@@ -1464,30 +1464,6 @@ DefineFunction(
   ));
 
 DefineFunction(
-   array(
-   'name'   => "setproperty",
-   'desc'   => "Not-implemented and it is for backward compatibility only",
-   'flags'  =>  HasDocComment,
-   'return' => array(
-     'type'   => Boolean,
-     'desc'   => "Returns TRUE on success or FALSE on failure.",
-   ),
-   'args'   => array(
-     array(
-       'name'   => "prop",
-       'type'   => String,
-       'desc'   => "Name of the property. E.g., NullOnKeyMiss, ProtocolBinary" 
-     ),
-     array(
-       'name'   => "var",
-       'type'   => Variant,
-       'desc'   => "The value to set for the given property",
-     ),
-   ),
- ));
-
-
-DefineFunction(
   array(
     'name'   => "getextendedstats",
     'desc'   => "Memcache::getExtendedStats() returns a two-dimensional associative array with server statistics. Array keys correspond to host:port of server and values contain the individual server statistics. A failed server will have its corresponding entry set to FALSE. You can also use the memcache_get_extended_stats() function.\n\nThis function has been added to Memcache version 2.0.0.",

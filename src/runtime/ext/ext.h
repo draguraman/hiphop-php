@@ -41,6 +41,7 @@
 #include <runtime/ext/profile/extprofile_icu.h>
 #include <runtime/ext/profile/extprofile_icu_ucsdet.h>
 #include <runtime/ext/profile/extprofile_icu_uspoof.h>
+#include <runtime/ext/profile/extprofile_igbinary.h>
 #include <runtime/ext/profile/extprofile_image.h>
 #include <runtime/ext/profile/extprofile_imagesprite.h>
 #include <runtime/ext/profile/extprofile_imap.h>

@@ -7770,7 +7770,7 @@ CallInfo c_Memcache::ci_replace((void*)&c_Memcache::i_replace, (void*)&c_Memcach
 CallInfo c_Memcache::ci_setproperty((void*)&c_Memcache::i_setproperty, (void*)&c_Memcache::ifa_setproperty, 2, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_decrement((void*)&c_Memcache::i_decrement, (void*)&c_Memcache::ifa_decrement, 2, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_delete((void*)&c_Memcache::i_delete, (void*)&c_Memcache::ifa_delete, 2, 4, 0x0000000000000000LL);
-CallInfo c_Memcache::ci_get((void*)&c_Memcache::i_get, (void*)&c_Memcache::ifa_get, 2, 4, 0x0000000000000002LL);
+CallInfo c_Memcache::ci_get((void*)&c_Memcache::i_get, (void*)&c_Memcache::ifa_get, 3, 4, 0x0000000000000006LL);
 CallInfo c_Memcache::ci_setoptimeout((void*)&c_Memcache::i_setoptimeout, (void*)&c_Memcache::ifa_setoptimeout, 1, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_addserver((void*)&c_Memcache::i_addserver, (void*)&c_Memcache::ifa_addserver, 9, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_setcompressthreshold((void*)&c_Memcache::i_setcompressthreshold, (void*)&c_Memcache::ifa_setcompressthreshold, 2, 4, 0x0000000000000000LL);
@@ -7780,6 +7780,7 @@ CallInfo c_Memcache::ci_cas((void*)&c_Memcache::i_cas, (void*)&c_Memcache::ifa_c
 CallInfo c_Memcache::ci_getbykey((void*)&c_Memcache::i_getbykey, (void*)&c_Memcache::ifa_getbykey, 5, 4, 0x000000000000001CLL);
 CallInfo c_Memcache::ci_flush((void*)&c_Memcache::i_flush, (void*)&c_Memcache::ifa_flush, 1, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_getserverstatus((void*)&c_Memcache::i_getserverstatus, (void*)&c_Memcache::ifa_getserverstatus, 2, 4, 0x0000000000000000LL);
+CallInfo c_Memcache::ci_getl((void*)&c_Memcache::i_getl, (void*)&c_Memcache::ifa_getl, 3, 4, 0x0000000000000004LL);
 CallInfo c_Memcache::ci___construct((void*)&c_Memcache::i___construct, (void*)&c_Memcache::ifa___construct, 0, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_get2((void*)&c_Memcache::i_get2, (void*)&c_Memcache::ifa_get2, 4, 4, 0x000000000000000ELL);
 CallInfo c_Memcache::ci___destruct((void*)&c_Memcache::i___destruct, (void*)&c_Memcache::ifa___destruct, 0, 4, 0x0000000000000000LL);
@@ -7809,6 +7810,9 @@ Variant c_Memcache::i_get(MethodCallPackage &mcp, CArrRef params) {
 }
 Variant c_Memcache::i_get2(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_get2);
+}
+Variant c_Memcache::i_getl(MethodCallPackage &mcp, CArrRef params) {
+  return invoke_meth_few_handler(mcp, params, &ifa_getl);
 }
 Variant c_Memcache::i_getbykey(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_getbykey);
@@ -7846,11 +7850,11 @@ Variant c_Memcache::i_getserverstatus(MethodCallPackage &mcp, CArrRef params) {
 Variant c_Memcache::i_setcompressthreshold(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_setcompressthreshold);
 }
-Variant c_Memcache::i_getstats(MethodCallPackage &mcp, CArrRef params) {
-  return invoke_meth_few_handler(mcp, params, &ifa_getstats);
-}
 Variant c_Memcache::i_setproperty(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_setproperty);
+}
+Variant c_Memcache::i_getstats(MethodCallPackage &mcp, CArrRef params) {
+  return invoke_meth_few_handler(mcp, params, &ifa_getstats);
 }
 Variant c_Memcache::i_getextendedstats(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_getextendedstats);
@@ -7992,11 +7996,13 @@ Variant c_Memcache::ifa_get(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_I
     return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_get, coo_Memcache);
   }
   c_Memcache *self ATTRIBUTE_UNUSED (static_cast<c_Memcache*>(mcp.obj));
-  if (UNLIKELY(count < 1 || count > 2)) return throw_wrong_arguments("get", count, 1, 2, 1);
+  if (UNLIKELY(count < 1 || count > 3)) return throw_wrong_arguments("get", count, 1, 3, 1);
   CVarRef arg0(a0);
   if (count <= 1) return (self->t_get(arg0));
   VRefParam arg1(vref(a1));
-  return (self->t_get(arg0, arg1));
+  if (count <= 2) return (self->t_get(arg0, arg1));
+  VRefParam arg2(vref(a2));
+  return (self->t_get(arg0, arg1, arg2));
 }
 Variant c_Memcache::ifa_get2(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(mcp.obj == 0)) {
@@ -8011,6 +8017,19 @@ Variant c_Memcache::ifa_get2(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_
   if (count <= 3) return (self->t_get2(arg0, arg1, arg2));
   VRefParam arg3(vref(a3));
   return (self->t_get2(arg0, arg1, arg2, arg3));
+}
+Variant c_Memcache::ifa_getl(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(mcp.obj == 0)) {
+    return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_getl, coo_Memcache);
+  }
+  c_Memcache *self ATTRIBUTE_UNUSED (static_cast<c_Memcache*>(mcp.obj));
+  if (UNLIKELY(count < 1 || count > 3)) return throw_wrong_arguments("getl", count, 1, 3, 1);
+  CVarRef arg0(a0);
+  if (count <= 1) return (self->t_getl(arg0));
+  CVarRef arg1(a1);
+  if (count <= 2) return (self->t_getl(arg0, arg1));
+  VRefParam arg2(vref(a2));
+  return (self->t_getl(arg0, arg1, arg2));
 }
 Variant c_Memcache::ifa_getbykey(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(mcp.obj == 0)) {
@@ -8147,6 +8166,16 @@ Variant c_Memcache::ifa_setcompressthreshold(MethodCallPackage &mcp, int count, 
   CVarRef arg1(a1);
   return (self->t_setcompressthreshold(arg0, arg1));
 }
+Variant c_Memcache::ifa_setproperty(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(mcp.obj == 0)) {
+    return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_setproperty, coo_Memcache);
+  }
+  c_Memcache *self ATTRIBUTE_UNUSED (static_cast<c_Memcache*>(mcp.obj));
+  if (UNLIKELY(count != 2)) return throw_wrong_arguments("setproperty", count, 2, 2, 1);
+  CVarRef arg0(a0);
+  CVarRef arg1(a1);
+  return (self->t_setproperty(arg0, arg1));
+}
 Variant c_Memcache::ifa_getstats(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(mcp.obj == 0)) {
     return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_getstats, coo_Memcache);
@@ -8160,16 +8189,6 @@ Variant c_Memcache::ifa_getstats(MethodCallPackage &mcp, int count, INVOKE_FEW_A
   if (count <= 2) return (self->t_getstats(arg0, arg1));
   CVarRef arg2(a2);
   return (self->t_getstats(arg0, arg1, arg2));
-}
-Variant c_Memcache::ifa_setproperty(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
-  if (UNLIKELY(mcp.obj == 0)) {
-    return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_setproperty, coo_Memcache);
-  }
-  c_Memcache *self ATTRIBUTE_UNUSED (static_cast<c_Memcache*>(mcp.obj));
-  if (UNLIKELY(count != 2)) return throw_wrong_arguments("setproperty", count, 2, 2, 1);
-  CVarRef arg0(a0);
-  CVarRef arg1(a1);
-  return (self->t_setproperty(arg0, arg1));
 }
 Variant c_Memcache::ifa_getextendedstats(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(mcp.obj == 0)) {
@@ -8252,6 +8271,7 @@ const MethodCallInfoTable c_Memcache::s_call_info_table[] = {
   { 0x4770E54B86BF7765LL, 0, 16, "getextendedstats", &c_Memcache::ci_getextendedstats },
   { 0x56CD24186237AAE6LL, 1, 9, "addserver", &c_Memcache::ci_addserver },
   { 0x25DCCC35D69AD828LL, 1, 3, "get", &c_Memcache::ci_get },
+  { 0x132DA9318A3A852BLL, 1, 4, "getl", &c_Memcache::ci_getl },
   { 0x3B59E52110B990F2LL, 1, 11, "deleteByKey", &c_Memcache::ci_deletebykey },
   { 0x7F974836AACC1EF3LL, 1, 10, "__destruct", &c_Memcache::ci___destruct },
   { 0x7F4CB6AD55C9F7B8LL, 1, 8, "setByKey", &c_Memcache::ci_setbykey },
@@ -8268,9 +8288,9 @@ const int c_Memcache::s_call_info_index[] = {
   -1,-1,6,7,-1,-1,9,10,
   -1,11,12,-1,-1,-1,-1,13,
   -1,14,-1,-1,-1,16,18,-1,
-  19,-1,-1,-1,-1,-1,-1,-1,
-  -1,-1,20,21,-1,-1,-1,-1,
-  22,23,24,-1,-1,25,26,-1,
+  19,-1,-1,20,-1,-1,-1,-1,
+  -1,-1,21,22,-1,-1,-1,-1,
+  23,24,25,-1,-1,26,27,-1,
 
 };
 c_Memcache *c_Memcache::create() {
