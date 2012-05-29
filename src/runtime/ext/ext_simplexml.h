@@ -117,6 +117,7 @@ class c_SimpleXMLElement :
   virtual Array o_toArray() const;
   virtual Variant *___lval(Variant v_name);
   virtual bool o_propExists(CStrRef s, CStrRef context = null_string);
+  SmartPtr<c_SimpleXMLElement> m_parent;
 
  private:
   xmlXPathContextPtr m_xpath;
@@ -183,6 +184,9 @@ public:
   SmartPtr<c_SimpleXMLElement> m_parent;
   ArrayIter *m_iter1;
   ArrayIter *m_iter2;
+  bool m_property_iterator;
+  String m_property_name;
+  Variant m_prop_children;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -48,10 +48,12 @@ class MEMCACHEGlobals : public RequestEventHandler {
 public:
   std::string hash_strategy;
   std::string hash_function;
+  bool	      NullOnKeyMiss;
 
   MEMCACHEGlobals() {;}
 
   virtual void requestInit() {
+    NullOnKeyMiss = true;
     hash_strategy = "standard";
     hash_function = "crc32";
 
@@ -299,13 +301,16 @@ static String mmc_compress(const String &sdata, int &flag) {
 }
 
 String static memcache_prepare_for_storage(CVarRef var, int &flag) {
-    if (var.isString() || var.isNumeric() || var.isBoolean()) {
+    String sdata = var.toString();
+    if ((var.isString() && sdata.size() <= 30) || var.isNumeric() || var.isBoolean()) {
       flag &= ~(MMC_COMPRESSED | MMC_COMPRESSED_LZO | MMC_COMPRESSED_BZIP2);
-      return var.toString();
+      return sdata;
     }
     else {
-      flag |= MMC_SERIALIZED;
-      String sdata = f_serialize(var);
+      if (!var.isString()) {
+          flag |= MMC_SERIALIZED;
+          sdata = f_serialize(var);
+      }
 
       if(flag & (MMC_COMPRESSED | MMC_COMPRESSED_LZO | MMC_COMPRESSED_BZIP2) ) {
         sdata = mmc_compress(sdata, flag);
@@ -482,7 +487,8 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/) {
     if (!real_keys.empty()) {
       const char *payload = NULL;
       size_t payload_len = 0;
-      uint32_t flags = 0;
+      uint32_t fl = 0;
+      Variant flag;
       const char *res_key = NULL;
       size_t res_key_len = 0;
 
@@ -492,7 +498,7 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/) {
                                               &key_len[0], real_keys.size());
       memcached_result_create(&m_memcache, &result);
       Array return_val;
-
+      Array flags_val;
       while ((memcached_fetch_result(&m_memcache, &result, &ret)) != NULL) {
         if (ret != MEMCACHED_SUCCESS) {
           // should probably notify about errors
@@ -501,22 +507,24 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/) {
 
         payload     = memcached_result_value(&result);
         payload_len = memcached_result_length(&result);
-        flags       = memcached_result_flags(&result);
+        fl          = memcached_result_flags(&result);
         res_key     = memcached_result_key_value(&result);
         res_key_len = memcached_result_key_length(&result);
 
+	flag = (int)fl;
+        flags_val.set(String(res_key, res_key_len, CopyString),flag);
         return_val.set(String(res_key, res_key_len, CopyString),
                        memcache_fetch_from_storage(payload,
-                                                   payload_len, flags));
+                                                   payload_len, fl));
       }
       memcached_result_free(&result);
-
+      flags = flags_val;
       return return_val;
     }
   } else {
     char *payload = NULL;
     size_t payload_len = 0;
-    uint32_t flags = 0;
+    uint32_t fl = 0;
 
     memcached_return_t ret;
     String skey = key.toString();
@@ -526,20 +534,28 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/) {
     }
 
     payload = memcached_get(&m_memcache, skey.c_str(), skey.length(),
-                            &payload_len, &flags, &ret);
+                            &payload_len, &fl, &ret);
 
+    flags = (int)fl;
     /* This is for historical reasons from libmemcached*/
     if (ret == MEMCACHED_END) {
       ret = MEMCACHED_NOTFOUND;
     }
 
     if (ret == MEMCACHED_NOTFOUND) {
-      return false;
+      if (MEMCACHEG(NullOnKeyMiss)) {
+	  return null;
+      } else  {
+          return false;
+      }
     }
 
-    Variant retval = memcache_fetch_from_storage(payload, payload_len, flags);
+    if (ret != MEMCACHED_SUCCESS) {
+	return false;
+    }
+    Variant retval = memcache_fetch_from_storage(payload, payload_len, fl);
     free(payload);
-
+   
     return retval;
   }
   return false;
@@ -580,7 +596,11 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 
       /* init return value */
       for (ArrayIter iter(keyArr); iter; ++iter) {
-        return_val.set(iter.second().toString(), false);
+          if (MEMCACHEG(NullOnKeyMiss)) {
+              return_val.set(iter.second().toString(), null);
+          } else  {
+              return_val.set(iter.second().toString(), false);
+          }
       }
 	
 
@@ -668,6 +688,15 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
       if (status == MEMCACHED_END) status = MEMCACHED_NOTFOUND;
       if (status != MEMCACHED_SUCCESS) {
         if(cas.isReferenced()) cas = (int64) 0;
+        if (status == MEMCACHED_NOTFOUND) {
+          if (MEMCACHEG(NullOnKeyMiss)) {
+              var = Variant(null);
+          } else  {
+	      var = Variant(false);
+          }
+        } else {
+	      var = Variant(false);
+	}
         return (status == MEMCACHED_NOTFOUND); /* get2 returns TRUE on key miss, but false on server fail */
       }
     }
@@ -716,12 +745,13 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
 
   do {
     if( memcached_fetch_result(&m_memcache, &result, &status) == NULL ) {
-      raise_warning("t_getbykey(): memcached_fetch_result() returned NULL");
-      break;
+      //raise_warning("t_getbykey(): memcached_fetch_result() returned NULL");
     }
-
-    if (status == MEMCACHED_END) status = MEMCACHED_NOTFOUND;
-
+    if (status == MEMCACHED_END || status == MEMCACHED_NOTFOUND) { 
+	status = MEMCACHED_NOTFOUND;
+	fRet = true;
+        break;
+    }
     if (status != MEMCACHED_SUCCESS) {
       raise_warning("t_getbykey(): memcached_fetch_result() failed. status=%d", (int)status);
       break;
@@ -829,7 +859,7 @@ bool c_Memcache::t_deletebykey(CStrRef key, CStrRef shardKey, int expire /*= 0*/
   return (ret == MEMCACHED_SUCCESS);
 }
 
-int64 c_Memcache::t_increment(CStrRef key, int offset /*= 1*/) {
+Variant c_Memcache::t_increment(CStrRef key, int offset /*= 1*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::increment);
   if (key.empty()) {
     raise_warning("Key cannot be empty");
@@ -843,11 +873,10 @@ int64 c_Memcache::t_increment(CStrRef key, int offset /*= 1*/) {
   if (ret == MEMCACHED_SUCCESS) {
     return (int64)value;
   }
-
   return false;
 }
 
-int64 c_Memcache::t_decrement(CStrRef key, int offset /*= 1*/) {
+Variant c_Memcache::t_decrement(CStrRef key, int offset /*= 1*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::decrement);
   if (key.empty()) {
     raise_warning("Key cannot be empty");
@@ -936,6 +965,15 @@ bool c_Memcache::t_setcompressthreshold(int threshold,
   m_compress_threshold = threshold;
   m_min_compress_savings = min_savings;
 
+  return true;
+}
+
+bool c_Memcache::t_setproperty(CStrRef prop, CVarRef var) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::setproperty);
+  if (prop == "NullOnKeyMiss") {
+	MEMCACHEG(NullOnKeyMiss) = var.toBoolean();
+  }
+  //NullOnKeyMiss, ProtocolBinary and EnableChecksum
   return true;
 }
 
@@ -1132,13 +1170,13 @@ bool f_memcache_delete(CObjRef memcache, CStrRef key, int expire /* = 0 */) {
   return memcache_obj->t_delete(key, expire);
 }
 
-int64 f_memcache_increment(CObjRef memcache, CStrRef key,
+Variant f_memcache_increment(CObjRef memcache, CStrRef key,
                            int offset /* = 1 */) {
   c_Memcache *memcache_obj = memcache.getTyped<c_Memcache>();
   return memcache_obj->t_increment(key, offset);
 }
 
-int64 f_memcache_decrement(CObjRef memcache, CStrRef key,
+Variant f_memcache_decrement(CObjRef memcache, CStrRef key,
                            int offset /* = 1 */) {
   c_Memcache *memcache_obj = memcache.getTyped<c_Memcache>();
   return memcache_obj->t_decrement(key, offset);

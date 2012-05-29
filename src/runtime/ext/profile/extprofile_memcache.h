@@ -66,12 +66,12 @@ inline bool x_memcache_delete(CObjRef memcache, CStrRef key, int expire = 0) {
   return f_memcache_delete(memcache, key, expire);
 }
 
-inline int64 x_memcache_increment(CObjRef memcache, CStrRef key, int offset = 1) {
+inline Variant x_memcache_increment(CObjRef memcache, CStrRef key, int offset = 1) {
   FUNCTION_INJECTION_BUILTIN(memcache_increment);
   return f_memcache_increment(memcache, key, offset);
 }
 
-inline int64 x_memcache_decrement(CObjRef memcache, CStrRef key, int offset = 1) {
+inline Variant x_memcache_decrement(CObjRef memcache, CStrRef key, int offset = 1) {
   FUNCTION_INJECTION_BUILTIN(memcache_decrement);
   return f_memcache_decrement(memcache, key, offset);
 }
