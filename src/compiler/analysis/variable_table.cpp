@@ -68,6 +68,11 @@ VariableTable::VariableTable(BlockScope &blockScope)
       m_forcedVariants(0) {
 }
 
+struct {
+    string str;
+    string mod_str;
+}typedef tuple;
+
 void VariableTable::getNames(std::set<string> &names,
                              bool collectPrivate /* = true */) const {
   for (unsigned int i = 0; i < m_symbolVec.size(); i++) {
@@ -925,6 +930,7 @@ void VariableTable::outputCPPGlobalVariablesHeader(CodeGenerator &cg,
     // Volatile class declared flags
     ar->getCPPClassDeclaredFlags(cg, type2names);
     cg_printf("virtual bool class_exists(CStrRef name);\n");
+    cg_printf("bool CheckFileIncluded(CStrRef s);\n");
   }
 
   // Redeclared Functions
@@ -1263,6 +1269,56 @@ void VariableTable::outputCPPGVHashTableGetImpl(CodeGenerator &cg,
   }
   cg_printf(text2, tableSize - 1, tableSize - 1, tableSize - 1);
   cg_printf(text3);
+
+  vector< std::pair<string, string> > type2names;
+  ar->getCPPFileRunDeclInfo(cg, type2names);
+  cg_printf("\n");
+  cg_printf("#define HASH_CHECK(s1, s2, s3) { if (s1 == s2) return s3; }\n");
+  cg_printf("bool GlobalVariables::CheckFileIncluded(CStrRef s) {\n");
+  cg_indentBegin("\n");
+  cg_printf("int hash = hash_string((&s)->c_str()) %% 4096;\n\n");
+  cg_indentBegin("switch(hash){\n");
+  std::map< string, vector<tuple> > dump;
+  map< string, vector<tuple> >::iterator it;
+  for (vector< std::pair<string, string> >::const_iterator iter = type2names.begin();
+       iter != type2names.end(); ++iter) {
+      string str = iter->first;
+      int hashi = hash_string(str.c_str()) % 4096;
+      stringstream out;
+      out << hashi;
+      string hash = out.str();
+      vector<tuple> tup;
+      it = dump.find(hash);
+      if(it != dump.end()){
+	tup = it->second;
+      }
+
+      tuple t;
+      t.str = iter->second;
+      t.mod_str = str.c_str();
+      tup.push_back(t);
+      dump[hash] = tup;
+  }
+
+  for( map< string,vector<tuple> >::iterator ii=dump.begin(); ii!=dump.end(); ++ii){
+      vector<tuple> tup = ii->second;	
+      cg_indentBegin("case %s:\n", ii->first.c_str());
+      size_t j = 0; 
+      for(j = 0; j < tup.size(); j++){
+	cg_printf("HASH_CHECK(\"%s\", s, %s);\n", tup[j].mod_str.c_str(), tup[j].str.c_str());
+      }
+      cg_printf("break;\n");
+      cg_indentEnd("\n");
+  }
+
+  cg_indentBegin("default:\n");
+  cg_printf("return false;\n");
+  cg_indentEnd("\n");
+  cg_indentEnd("}\n");
+  cg_printf("return false;\n");
+  cg_indentEnd("}\n");
+  cg_printf("\n");
+
   cg.ifdefEnd("OMIT_JUMP_TABLE_GLOBAL_GETIMPL");
 }
 

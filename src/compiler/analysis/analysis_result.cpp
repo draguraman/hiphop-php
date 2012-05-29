@@ -3975,6 +3975,18 @@ void AnalysisResult::getCPPFileRunDecls(CodeGenerator &cg,
   }
 }
 
+void AnalysisResult::getCPPFileRunDeclInfo(CodeGenerator &cg,
+                                        vector< std::pair<string, string> > &type2names) {
+  BOOST_FOREACH(FileScopePtr f, m_fileScopes) {
+    if (!f->canUseDummyPseudoMain(shared_from_this())) {
+      type2names.push_back(std::pair<string, string>(f->getName(),
+			string("run_") + Option::PseudoMainPrefix +
+                     			f->pseudoMainName()));
+
+    }
+  }
+}
+
 void AnalysisResult::getCPPClassStaticInitializerFlags
 (CodeGenerator &cg, Type2SymbolSetMap &type2names) {
   SymbolSet &symbols = type2names["bool"];

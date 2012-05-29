@@ -92,6 +92,10 @@ void Globals::initialize() {
   }
 }
 
+bool Globals::CheckFileIncluded(CStrRef s){
+	return false;
+}
+
 bool Globals::declareConstant(CStrRef name, Variant &constant,
                               CVarRef value) {
   if (!value.isAllowedAsConstantValue()) {
