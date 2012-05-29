@@ -218,6 +218,7 @@ public:
 
   void outputCPPSystemImplementations(CodeGenerator &cg);
   void getCPPFileRunDecls(CodeGenerator &cg, Type2SymbolSetMap &type2names);
+  void getCPPFileRunDeclInfo(CodeGenerator &cg, std::vector< std::pair<std::string, std::string> > &type2names);
   void getCPPRedeclaredFunctionDecl(CodeGenerator &cg,
                                     Type2SymbolSetMap &type2names);
   void getCPPRedeclaredClassDecl(CodeGenerator &cg,

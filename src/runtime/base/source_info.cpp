@@ -16,6 +16,7 @@
 
 #include <runtime/base/source_info.h>
 #include <runtime/base/externals.h>
+#include <runtime/base/hphp_system.h>
 #include <util/lock.h>
 
 using namespace std;
@@ -88,11 +89,26 @@ const char *SourceInfo::getClassDeclaringFile(CStrRef name,
     if (file) return file;
   }
   INameMap::const_iterator iter = m_cls2file.find(name);
-  if (iter != m_cls2file.end()) {
+  if (iter == m_cls2file.end()) {
+    return NULL;
+  }
+  for (size_t i = 0; i < iter->second.size(); i++) {
+
     if (line) {
-      *line = iter->second[0]->line;
+      *line = iter->second[i]->line;
     }
-    return iter->second[0]->file;
+
+    if (iter->second.size() > 1){
+      SystemGlobals* m_globals = (SystemGlobals*)(get_global_variables());
+
+      if (m_globals->CheckFileIncluded(iter->second[i]->file)) {
+        return iter->second[i]->file;
+      }
+
+    } else {
+      return iter->second[0]->file;
+    }
+
   }
   return NULL;
 }
