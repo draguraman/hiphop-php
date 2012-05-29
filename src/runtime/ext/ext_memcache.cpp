@@ -366,7 +366,7 @@ static String mmc_uncompress(const char *payload, size_t payload_len, uint32_t f
     return String(result, result_len, AttachString);
   }
   else {
-    raise_error("memcache_fetch_from_storage: decompression failed payload_len=%d flags=%x status=%d error=%s",
+    raise_warning("memcache_fetch_from_storage: decompression failed payload_len=%d flags=%x status=%d error=%s",
         payload_len, flags, status, get_zlib_status_string(status));
     return null;
   }
@@ -499,10 +499,10 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/, VRefParam cas
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::get);
   TAINT_OBSERVER(TAINT_BIT_ALL, TAINT_BIT_NONE);
 
-  VRefParamValue refVar;
-  Variant result2 = this->t_get2(key, refVar, flags, cas);
-  Variant var = (Variant&)refVar;
-  return var;
+  Variant data;
+  VRefParam resultData(data);
+  Variant result2 = this->t_get2(key, resultData, flags, cas);
+  return resultData;
   }
 
 Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*/, VRefParam cas /*= null*/) {
@@ -658,7 +658,6 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
     }
 
     var = memcache_fetch_from_storage(payload, payload_len, flag);
-
     memcached_result_free(&value);
 
     return true;
