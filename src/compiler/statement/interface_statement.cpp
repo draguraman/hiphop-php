@@ -42,7 +42,7 @@ InterfaceStatement::InterfaceStatement
     m_originalName(name), m_base(base),
     m_docComment(docComment), m_stmt(stmt) {
   m_name = Util::toLower(name);
-  if (m_base) m_base->toLower();
+  //if (m_base) m_base->toLower();
 }
 
 InterfaceStatement::InterfaceStatement
@@ -53,7 +53,7 @@ InterfaceStatement::InterfaceStatement
     m_originalName(name), m_base(base),
     m_docComment(docComment), m_stmt(stmt) {
   m_name = Util::toLower(name);
-  if (m_base) m_base->toLower();
+  //if (m_base) m_base->toLower();
 }
 
 StatementPtr InterfaceStatement::clone() {
