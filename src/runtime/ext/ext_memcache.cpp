@@ -308,7 +308,7 @@ static String mmc_compress(const String &sdata, int &flag) {
 
 String static memcache_prepare_for_storage(CVarRef var, int &flag) {
     String sdata;
-    if ((var.isString() && sdata.size() <= 30) || var.isNumeric() || var.isBoolean()) {
+    if ((var.isString() && var.toString().size() <= 30) || var.isNumeric() || var.isBoolean()) {
       flag &= ~(MMC_COMPRESSED | MMC_COMPRESSED_LZO | MMC_COMPRESSED_BZIP2 | MMC_SERIALIZED_IGBINARY | MMC_SERIALIZED);
       return var.toString();
     }
@@ -643,6 +643,9 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 	}
         return (status == MEMCACHED_NOTFOUND); /* get2 returns TRUE on key miss, but false on server fail */
       }
+	raise_warning("Inconsistent values from memcached_fetch_result\n");
+      var = Variant(false);
+      return false;
     }
 
     payload = memcached_result_value(&value);
