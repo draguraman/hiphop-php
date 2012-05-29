@@ -1040,6 +1040,12 @@ DefineFunction(
         'value'  => "null",
         'desc'   => "If present, flags fetched along with the values will be written to this parameter. These flags are the same as the ones given to for example Memcache::set(). The lowest byte of the int is reserved for pecl/memcache internal usage (e.g. to indicate compression and serialization status).",
       ),
+      array(
+        'name'   => "cas",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
+      ),      
     ),
     'taint_observer' => array(
       'set_mask'   => "TAINT_BIT_ALL",
@@ -1084,6 +1090,36 @@ DefineFunction(
   
 DefineFunction(
   array(
+    'name'   => "getl",
+    'desc'   => "get and lock a key from Membase server",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Variant,
+      'desc'   => "Returns the key or false if the key was not found.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The key to fetch.",
+      ),
+      array(
+        'name'   => "timeout",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Number of seconds to lock the key. Zero means no timeout.",
+      ),      
+      array(
+        'name'   => "flags",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, flags fetched along with the values will be written to this parameter. These flags are the same as the ones given to for example Memcache::set(). The lowest byte of the int is reserved for pecl/memcache internal usage (e.g. to indicate compression and serialization status).",
+      ),
+    ),
+  ));  
+  
+DefineFunction(
+  array(
     'name'   => "getByKey",
     'desc'   => "Memcache::getByKey() for zynga",
     'flags'  =>  HasDocComment,
@@ -1115,7 +1151,7 @@ DefineFunction(
       ),
       array(
         'name'   => "cas",
-        'type'   => Variant | Reference, 
+        'type'   => Variant | Reference,
         'value'  => "null",
         'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
       ),
@@ -1155,7 +1191,7 @@ DefineFunction(
       ),
       array(
         'name'   => "cas",
-        'type'   => Variant | Reference, 
+        'type'   => Variant | Reference,
         'value'  => "null",
         'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
       ),
@@ -1369,6 +1405,29 @@ DefineFunction(
         'type'   => Double,
         'value'  => "0.2",
         'desc'   => "Specifies the minimum amount of savings to actually store the value compressed. The supplied value must be between 0 and 1. Default value is 0.2 giving a minimum 20% compression savings.",
+      ),
+    ),
+  ));
+
+DefineFunction(
+  array(
+    'name'   => "setproperty",
+    'desc'   => "Not-implemented and it is for backward compatibility only",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "prop",
+        'type'   => String,
+        'desc'   => "Name of the property. E.g., NullOnKeyMiss, ProtocolBinary and EnableChecksum",
+      ),
+      array(
+        'name'   => "var",
+        'type'   => Variant,
+        'desc'   => "The value to set for the given property",
       ),
     ),
   ));

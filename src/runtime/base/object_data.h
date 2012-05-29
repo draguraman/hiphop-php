@@ -314,7 +314,7 @@ class ObjectData : public CountableNF {
   static Variant NullConstructorFewArgs(MethodCallPackage &info, int count,
       INVOKE_FEW_ARGS_IMPL_ARGS);
   static int GetMaxId() ATTRIBUTE_COLD;
- protected:
+ public:
   virtual bool php_sleep(Variant &ret);
 public:
   bool hasCall();
