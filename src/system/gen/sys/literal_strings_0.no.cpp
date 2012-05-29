@@ -747,6 +747,7 @@ StaticString s_sys_ss3d09e8a5("startDTDAttlist");
 StaticString s_sys_ss3d6f0745("quote");
 StaticString s_sys_ss3d7f57f7("FETCH_NAMED");
 StaticString s_sys_ss3dea3a84("createDocument");
+StaticString s_sys_ss3dfb7908("setproperty");
 StaticString s_sys_ss3e63bc79("ATLANTIC");
 StaticString s_sys_ss3ed91f56("nextToken");
 StaticString s_sys_ss3ee05120("IS_STATIC");

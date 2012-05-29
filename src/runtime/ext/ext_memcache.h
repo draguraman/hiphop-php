@@ -33,8 +33,8 @@ bool f_memcache_cas(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, in
 bool f_memcache_replace(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0);
 Variant f_memcache_get(CObjRef memcache, CVarRef key, VRefParam flags = null);
 bool f_memcache_delete(CObjRef memcache, CStrRef key, int expire = 0);
-int64 f_memcache_increment(CObjRef memcache, CStrRef key, int offset = 1);
-int64 f_memcache_decrement(CObjRef memcache, CStrRef key, int offset = 1);
+Variant f_memcache_increment(CObjRef memcache, CStrRef key, int offset = 1);
+Variant f_memcache_decrement(CObjRef memcache, CStrRef key, int offset = 1);
 bool f_memcache_close(CObjRef memcache);
 bool f_memcache_debug(bool onoff);
 Variant f_memcache_get_version(CObjRef memcache);
@@ -76,10 +76,12 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(cas);
   public: bool t_replace(CStrRef key, CVarRef var, int flag = 0, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(replace);
-  public: Variant t_get(CVarRef key, VRefParam flags = null);
+  public: Variant t_get(CVarRef key, VRefParam flags = null, VRefParam cas = null);
   DECLARE_METHOD_INVOKE_HELPERS(get);
   public: Variant t_get2(CVarRef key, VRefParam val, VRefParam flags = null, VRefParam cas = null);
   DECLARE_METHOD_INVOKE_HELPERS(get2);
+  public: Variant t_getl(CStrRef key, int timeout = 0, VRefParam flags = null);
+  DECLARE_METHOD_INVOKE_HELPERS(getl);
   public: Variant t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRefParam flags = null, VRefParam cas = null);
   DECLARE_METHOD_INVOKE_HELPERS(getbykey);
   public: bool t_setbykey(CStrRef key, CVarRef val, int flag = 0, int expire = 0, VRefParam cas = null, CStrRef shardKey = null);
@@ -88,9 +90,9 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(delete);
   public: bool t_deletebykey(CStrRef key, CStrRef shardKey, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(deletebykey);
-  public: int64 t_increment(CStrRef key, int offset = 1);
+  public: Variant t_increment(CStrRef key, int offset = 1);
   DECLARE_METHOD_INVOKE_HELPERS(increment);
-  public: int64 t_decrement(CStrRef key, int offset = 1);
+  public: Variant t_decrement(CStrRef key, int offset = 1);
   DECLARE_METHOD_INVOKE_HELPERS(decrement);
   public: Variant t_getversion();
   DECLARE_METHOD_INVOKE_HELPERS(getversion);
@@ -104,6 +106,8 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(getserverstatus);
   public: bool t_setcompressthreshold(int threshold, double min_savings = 0.2);
   DECLARE_METHOD_INVOKE_HELPERS(setcompressthreshold);
+  public: bool t_setproperty(CStrRef prop, CVarRef var);
+  DECLARE_METHOD_INVOKE_HELPERS(setproperty);
   public: Array t_getstats(CStrRef type = null_string, int slabid = 0, int limit = 100);
   DECLARE_METHOD_INVOKE_HELPERS(getstats);
   public: Array t_getextendedstats(CStrRef type = null_string, int slabid = 0, int limit = 100);

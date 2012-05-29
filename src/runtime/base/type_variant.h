@@ -344,6 +344,10 @@ class Variant {
         this : this->m_data.pvar);
   }
 
+  void *asDataPtr() const {
+      return m_type == KindOfVariant ? m_data.pvar->asDataPtr() : (void*)m_data.pvar;
+    }
+
   ObjectData *objectForCall() const {
     if (m_type == KindOfObject) return m_data.pobj;
     if (m_type == KindOfVariant) {

@@ -140,10 +140,14 @@ static bool isSpaceString(xmlNodePtr node, xmlChar *content) {
 static int Debug_Node_Creation=0;
 static c_SimpleXMLElement *create_text(CObjRef doc, xmlNodePtr node,
                                        CStrRef value, CStrRef ns,
-                                       bool is_prefix, bool free_text) {
+                                       bool is_prefix, bool free_text,
+					c_SimpleXMLElement *parent = NULL) {
     if(Debug_Node_Creation) std::cout<<"Creating  text node:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
   c_SimpleXMLElement *elem = NEWOBJ(c_SimpleXMLElement)();
   elem->m_doc = doc;
+  if (parent) {
+	  elem->m_parent = parent;
+  } 
   elem->m_node = node->parent; // assign to parent, not node
   elem->m_children.set(0, value);
   elem->m_array.set(0,value);
@@ -152,18 +156,20 @@ static c_SimpleXMLElement *create_text(CObjRef doc, xmlNodePtr node,
   elem->m_attributes = collect_attributes(node->parent, ns, is_prefix);
   return elem;
 }
-
 static Array create_children(CObjRef doc, xmlNodePtr root,
-                             CStrRef ns, bool is_prefix);
+                             CStrRef ns, bool is_prefix, c_SimpleXMLElement *parent = NULL);
 
 static c_SimpleXMLElement *create_element(CObjRef doc, xmlNodePtr node,
-                                          CStrRef ns, bool is_prefix) {
+                                          CStrRef ns, bool is_prefix, c_SimpleXMLElement *parent=NULL) {
   c_SimpleXMLElement *elem = NEWOBJ(c_SimpleXMLElement)();
   elem->m_doc = doc;
   elem->m_node = node;
+  if (parent) {
+	  elem->m_parent = parent;
+  }
   if (node) {
 	if(Debug_Node_Creation) std::cout<<"Creating  Element:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
-    elem->m_children = create_children(doc, node, ns, is_prefix);
+    elem->m_children = create_children(doc, node, ns, is_prefix,elem);
     elem->m_attributes = collect_attributes(node, ns, is_prefix);
     elem->__populate_m_array();
   }
@@ -171,7 +177,7 @@ static c_SimpleXMLElement *create_element(CObjRef doc, xmlNodePtr node,
 }
 
 static Array create_children(CObjRef doc, xmlNodePtr root,
-                             CStrRef ns, bool is_prefix) {
+                             CStrRef ns, bool is_prefix, c_SimpleXMLElement *parent) {
   Array properties = Array::Create();
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if(Debug_Node_Creation) std::cout<<"Creating Children:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
@@ -186,7 +192,7 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
           add_property
             (properties, root,
              create_text(doc, node, node_list_to_string(root->doc, node),
-                         ns, is_prefix, true), isSpaceString(node, node->content));
+                         ns, is_prefix, true, parent), isSpaceString(node, node->content));
         }
         continue;
       }
@@ -197,12 +203,12 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
       Object sub;
       if (child && child->type == XML_TEXT_NODE && !xmlIsBlankNode(child) && !child->next) {
         sub = create_text(doc, child, node_list_to_string(root->doc, child),
-                          ns, is_prefix, false);
+                          ns, is_prefix, false, parent);
       } else {
         if (node->type == XML_COMMENT_NODE) {
 		continue;
 	}
-        sub = create_element(doc, node, ns, is_prefix);
+        sub = create_element(doc, node, ns, is_prefix, parent);
       }
       add_property(properties, node, sub);
     }   
@@ -381,7 +387,7 @@ void c_SimpleXMLElement::t___construct(CStrRef data, int64 options /* = 0 */,
     m_doc = Object(NEWOBJ(XmlDocWrapper)(doc));
     m_node = xmlDocGetRootElement(doc);
     if (m_node) {
-      m_children = create_children(m_doc, m_node, ns, is_prefix);
+      m_children = create_children(m_doc, m_node, ns, is_prefix, this);
       m_attributes = collect_attributes(m_node, ns, is_prefix);
       __populate_m_array();
     }
@@ -716,7 +722,7 @@ Variant c_SimpleXMLElement::t_addchild(CStrRef qname,
     xmlFree(prefix);
   }
 
-  Object child = create_element(m_doc, newnode, newns, false);
+  Object child = create_element(m_doc, newnode, newns, false, this);
   if (m_children.toArray().exists(newname)) {
     Variant &tmp = m_children.lvalAt(newname);
     if (tmp.isArray()) {
@@ -823,6 +829,7 @@ Variant c_SimpleXMLElement::t___get(Variant name) {
     e->m_array = elem->m_array;
     e->m_is_text = elem->m_is_text;
     e->m_is_property = true;
+    e->m_parent = elem->m_parent;
     return e;
   }
   if (ret.isString()) {
@@ -956,7 +963,7 @@ Variant c_SimpleXMLElement::t___set(Variant name, Variant value) {
 
   if (newnode) {
     String ns((char*)m_node->ns, CopyString);
-    Object child = create_element(m_doc, newnode, ns, false);
+    Object child = create_element(m_doc, newnode, ns, false, this);
     if (m_is_attribute) {
       m_attributes.set(name, child);
       m_children.set("@attributes", m_attributes);
@@ -1145,7 +1152,8 @@ void c_SimpleXMLElement::t_offsetunset(CVarRef index) {
 
 c_SimpleXMLElementIterator::c_SimpleXMLElementIterator(
   const ObjectStaticCallbacks *cb) :
-    ExtObjectData(cb), m_parent(), m_iter1(NULL), m_iter2(NULL) {
+    ExtObjectData(cb), m_parent(), m_iter1(NULL), m_iter2(NULL), 
+    m_property_iterator(false), m_property_name() {
 }
 
 c_SimpleXMLElementIterator::~c_SimpleXMLElementIterator() {
@@ -1170,12 +1178,13 @@ void c_SimpleXMLElementIterator::reset_iterator() {
 
   // When I'm a node like $node->name, we iterate through all my siblings with
   // same name of mine.
-  if (m_parent->m_is_property) {
+  if (m_parent->m_is_property && !m_property_iterator) {
+    m_property_iterator = true;
     String name = m_parent->t_getname();
-    m_parent = create_element(m_parent->m_doc, m_parent->m_node->parent,
-                              "", false);
-    Variant children = m_parent->m_children[name];
-    m_parent->m_children = CREATE_MAP1(name, children);
+    m_property_name = name;
+    m_parent = m_parent->m_parent;
+    Variant children = m_parent->m_children[m_property_name];
+    m_prop_children = CREATE_MAP1(name, children);
     // fall through
   }
 
@@ -1183,6 +1192,18 @@ void c_SimpleXMLElementIterator::reset_iterator() {
     return;
   }
 
+  if (m_property_iterator) {
+  if (m_prop_children.toArray().size() == 1) {
+    ArrayIter iter(m_prop_children);
+    if (iter.second().isObject()) {
+      c_SimpleXMLElement *elem = iter.second().toObject().
+        getTyped<c_SimpleXMLElement>();
+      if (elem->m_is_text && elem->m_free_text) {
+        return;
+      }
+    }
+  }
+  } else {
   if (m_parent->m_children.toArray().size() == 1) {
     ArrayIter iter(m_parent->m_children);
     if (iter.second().isObject()) {
@@ -1193,10 +1214,20 @@ void c_SimpleXMLElementIterator::reset_iterator() {
       }
     }
   }
+  }
 
+  if (m_property_iterator) {
+  if (!m_iter1) {
+  m_iter1 = new ArrayIter(m_prop_children);
+  if (!m_iter1->end() && m_iter1->second().isArray()) {
+    m_iter2 = new ArrayIter(m_iter1->second());
+  }
+  }
+  } else {
   m_iter1 = new ArrayIter(m_parent->m_children);
   if (!m_iter1->end() && m_iter1->second().isArray()) {
     m_iter2 = new ArrayIter(m_iter1->second());
+  }
   }
 }
 

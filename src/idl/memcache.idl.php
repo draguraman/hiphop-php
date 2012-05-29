@@ -376,7 +376,7 @@ DefineFunction(
     'desc'   => "Memcache::increment() increments value of an item by the specified value. If item specified by key was not numeric and cannot be converted to a number, it will change its value to value. Memcache::increment() does not create an item if it doesn't already exist.\n\nDo not use Memcache::increment() with items that have been stored compressed because subsequent calls to Memcache::get() will fail. Also you can use memcache_increment() function.",
     'flags'  =>  HasDocComment,
     'return' => array(
-      'type'   => Int64,
+      'type'   => Variant,
       'desc'   => "Returns new items value on success or FALSE on failure.",
     ),
     'args'   => array(
@@ -405,7 +405,7 @@ DefineFunction(
     'desc'   => "Memcache::decrement() decrements value of the item by value. Similarly to Memcache::increment(), current value of the item is being converted to numerical and after that value is substracted.\n\nNew item's value will not be less than zero.\n\nDo not use Memcache::decrement() with item, which was stored compressed, because consequent call to Memcache::get() will fail. Memcache::decrement() does not create an item if it didn't exist. Also you can use memcache_decrement() function.",
     'flags'  =>  HasDocComment,
     'return' => array(
-      'type'   => Int64,
+      'type'   => Variant,
       'desc'   => "Returns item's new value on success or FALSE on failure.",
     ),
     'args'   => array(
@@ -1040,6 +1040,12 @@ DefineFunction(
         'value'  => "null",
         'desc'   => "If present, flags fetched along with the values will be written to this parameter. These flags are the same as the ones given to for example Memcache::set(). The lowest byte of the int is reserved for pecl/memcache internal usage (e.g. to indicate compression and serialization status).",
       ),
+      array(
+        'name'   => "cas",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
+      ),      
     ),
     'taint_observer' => array(
       'set_mask'   => "TAINT_BIT_ALL",
@@ -1084,6 +1090,36 @@ DefineFunction(
   
 DefineFunction(
   array(
+    'name'   => "getl",
+    'desc'   => "get and lock a key from Membase server",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Variant,
+      'desc'   => "Returns the key or false if the key was not found.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The key to fetch.",
+      ),
+      array(
+        'name'   => "timeout",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Number of seconds to lock the key. Zero means no timeout.",
+      ),      
+      array(
+        'name'   => "flags",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, flags fetched along with the values will be written to this parameter. These flags are the same as the ones given to for example Memcache::set(). The lowest byte of the int is reserved for pecl/memcache internal usage (e.g. to indicate compression and serialization status).",
+      ),
+    ),
+  ));  
+  
+DefineFunction(
+  array(
     'name'   => "getByKey",
     'desc'   => "Memcache::getByKey() for zynga",
     'flags'  =>  HasDocComment,
@@ -1115,7 +1151,7 @@ DefineFunction(
       ),
       array(
         'name'   => "cas",
-        'type'   => Variant | Reference, 
+        'type'   => Variant | Reference,
         'value'  => "null",
         'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
       ),
@@ -1155,7 +1191,7 @@ DefineFunction(
       ),
       array(
         'name'   => "cas",
-        'type'   => Variant | Reference, 
+        'type'   => Variant | Reference,
         'value'  => "null",
         'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
       ),
@@ -1375,6 +1411,29 @@ DefineFunction(
 
 DefineFunction(
   array(
+    'name'   => "setproperty",
+    'desc'   => "Not-implemented and it is for backward compatibility only",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "prop",
+        'type'   => String,
+        'desc'   => "Name of the property. E.g., NullOnKeyMiss, ProtocolBinary and EnableChecksum",
+      ),
+      array(
+        'name'   => "var",
+        'type'   => Variant,
+        'desc'   => "The value to set for the given property",
+      ),
+    ),
+  ));
+
+DefineFunction(
+  array(
     'name'   => "getstats",
     'desc'   => "Memcache::getStats() returns an associative array with server's statistics. Array keys correspond to stats parameters and values to parameter's values. Also you can use memcache_get_stats() function.",
     'flags'  =>  HasDocComment,
@@ -1403,6 +1462,30 @@ DefineFunction(
       ),
     ),
   ));
+
+DefineFunction(
+   array(
+   'name'   => "setproperty",
+   'desc'   => "Not-implemented and it is for backward compatibility only",
+   'flags'  =>  HasDocComment,
+   'return' => array(
+     'type'   => Boolean,
+     'desc'   => "Returns TRUE on success or FALSE on failure.",
+   ),
+   'args'   => array(
+     array(
+       'name'   => "prop",
+       'type'   => String,
+       'desc'   => "Name of the property. E.g., NullOnKeyMiss, ProtocolBinary" 
+     ),
+     array(
+       'name'   => "var",
+       'type'   => Variant,
+       'desc'   => "The value to set for the given property",
+     ),
+   ),
+ ));
+
 
 DefineFunction(
   array(
