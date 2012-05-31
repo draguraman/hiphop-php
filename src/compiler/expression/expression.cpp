@@ -1413,8 +1413,9 @@ bool Expression::canUseFastCast(AnalysisResultPtr ar) {
 
 void Expression::outputCPPInternal(CodeGenerator &cg, AnalysisResultPtr ar) {
   if (hasError(Expression::BadPassByRef)) {
-    cg_printf("throw_fatal(\"bad pass by reference\")");
-    return;
+    std::cout << "Caught a bad reference\n";
+    //cg_printf("throw_fatal(\"bad pass by reference\")");
+    //return;
   }
   int closeParen = 0;
   TypePtr srcType, dstType;

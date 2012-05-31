@@ -86,6 +86,8 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(getbykey);
   public: bool t_setbykey(CStrRef key, CVarRef val, int flag = 0, int expire = 0, VRefParam cas = null, CStrRef shardKey = null);
   DECLARE_METHOD_INVOKE_HELPERS(setbykey);
+  public: bool t_casbykey(CStrRef key, CVarRef val, int flag = 0, int expire = 0, VRefParam cas = null, CStrRef shardKey = null);
+  DECLARE_METHOD_INVOKE_HELPERS(casbykey);
   public: bool t_delete(CStrRef key, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(delete);
   public: bool t_deletebykey(CStrRef key, CStrRef shardKey, int expire = 0);

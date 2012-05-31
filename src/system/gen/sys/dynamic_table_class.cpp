@@ -7756,6 +7756,7 @@ const int c_Memcache::s_instanceof_index[] = {
   1,
   0,-1,
 };
+CallInfo c_Memcache::ci_casbykey((void*)&c_Memcache::i_casbykey, (void*)&c_Memcache::ifa_casbykey, 6, 4, 0x0000000000000010LL);
 CallInfo c_Memcache::ci_increment((void*)&c_Memcache::i_increment, (void*)&c_Memcache::ifa_increment, 2, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_close((void*)&c_Memcache::i_close, (void*)&c_Memcache::ifa_close, 0, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_getstats((void*)&c_Memcache::i_getstats, (void*)&c_Memcache::ifa_getstats, 3, 4, 0x0000000000000000LL);
@@ -7816,6 +7817,9 @@ Variant c_Memcache::i_getl(MethodCallPackage &mcp, CArrRef params) {
 }
 Variant c_Memcache::i_getbykey(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_getbykey);
+}
+Variant c_Memcache::i_casbykey(MethodCallPackage &mcp, CArrRef params) {
+  return invoke_meth_few_handler(mcp, params, &ifa_casbykey);
 }
 Variant c_Memcache::i_setbykey(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_setbykey);
@@ -8045,6 +8049,24 @@ Variant c_Memcache::ifa_getbykey(MethodCallPackage &mcp, int count, INVOKE_FEW_A
   if (count <= 4) return (self->t_getbykey(arg0, arg1, arg2, arg3));
   VRefParam arg4(vref(a4));
   return (self->t_getbykey(arg0, arg1, arg2, arg3, arg4));
+}
+Variant c_Memcache::ifa_casbykey(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(mcp.obj == 0)) {
+    return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_casbykey, coo_Memcache);
+  }
+  c_Memcache *self ATTRIBUTE_UNUSED (static_cast<c_Memcache*>(mcp.obj));
+  if (UNLIKELY(count < 2)) return throw_wrong_arguments("casbykey", count, 2, 6, 1);
+  CVarRef arg0(a0);
+  CVarRef arg1(a1);
+  if (count <= 2) return (self->t_casbykey(arg0, arg1));
+  CVarRef arg2(a2);
+  if (count <= 3) return (self->t_casbykey(arg0, arg1, arg2));
+  CVarRef arg3(a3);
+  if (count <= 4) return (self->t_casbykey(arg0, arg1, arg2, arg3));
+  VRefParam arg4(vref(a4));
+  if (count <= 5) return (self->t_casbykey(arg0, arg1, arg2, arg3, arg4));
+  CVarRef arg5(a5);
+  return (self->t_casbykey(arg0, arg1, arg2, arg3, arg4, arg5));
 }
 Variant c_Memcache::ifa_setbykey(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(mcp.obj == 0)) {
@@ -8276,6 +8298,7 @@ const MethodCallInfoTable c_Memcache::s_call_info_table[] = {
   { 0x7F974836AACC1EF3LL, 1, 10, "__destruct", &c_Memcache::ci___destruct },
   { 0x7F4CB6AD55C9F7B8LL, 1, 8, "setByKey", &c_Memcache::ci_setbykey },
   { 0x742B441E13CD7279LL, 1, 8, "pconnect", &c_Memcache::ci_pconnect },
+  { 0x50BC469CFA9BF579LL, 0, 8, "casByKey", &c_Memcache::ci_casbykey },
   { 0x6A3D9F8EDB005E7ALL, 1, 5, "flush", &c_Memcache::ci_flush },
   { 0x1780351E8EFF92BDLL, 1, 15, "setserverparams", &c_Memcache::ci_setserverparams },
   { 0x7032C660AD16D7FELL, 1, 7, "connect", &c_Memcache::ci_connect },
@@ -8290,7 +8313,7 @@ const int c_Memcache::s_call_info_index[] = {
   -1,14,-1,-1,-1,16,18,-1,
   19,-1,-1,20,-1,-1,-1,-1,
   -1,-1,21,22,-1,-1,-1,-1,
-  23,24,25,-1,-1,26,27,-1,
+  23,24,26,-1,-1,27,28,-1,
 
 };
 c_Memcache *c_Memcache::create() {

@@ -712,6 +712,8 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
   const char* key_ptr = key.c_str();
   size_t key_length = key.size();
 
+  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
+
   memcached_return_t status = memcached_mget_by_key(&m_memcache,
       shardKey.data(), shardKey.size(),
       (const char * const *)&key_ptr,
@@ -757,7 +759,9 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
       }
 
       if(cas.isReferenced()) {
-        cas = (int64)memcached_result_cas(&result);
+	int64 cas_val = 0;
+        cas_val = (int64)memcached_result_cas(&result);
+	cas = Variant(cas_val);
       }
 
       fRet = true;
@@ -770,9 +774,50 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
   } while(true);
 
   memcached_result_free(&result);
+  if (status != MEMCACHED_SUCCESS) {
+    if (status == MEMCACHED_NOTFOUND) {
+      if (MEMCACHEG(NullOnKeyMiss)) {
+        val = Variant(null);
+      } else  {
+        val = Variant(false);
+      }
+    } else {
+      val = Variant(false);
+    }
+  }
 
   return fRet;
 }
+
+bool c_Memcache::t_casbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expire /*= 0*/, VRefParam cas /*= null*/, CStrRef shardKey /*= null*/) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::casbykey);
+  memcached_return_t status;
+
+  String serialized = memcache_prepare_for_storage(val, flag);
+  if( serialized.isNull() ) {
+    raise_warning("t_casbykey(): memcache_prepare_for_storage() returned null");
+    return false;
+  }
+  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
+
+  uint64_t casInt = 0;
+  if( cas.isReferenced() ) {
+    Variant& vcas = (Variant&)cas;
+    casInt = vcas.toInt64();
+  }
+
+    status = memcached_cas_by_key(&m_memcache,
+        shardKey.data(), shardKey.size(),
+        key.data(), key.size(),
+        serialized.c_str(), serialized.size(),
+        expire,
+        flag,
+        casInt
+        );
+  
+  return status == MEMCACHED_SUCCESS;
+}
+
 
 bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expire /*= 0*/, VRefParam cas /*= null*/, CStrRef shardKey /*= null*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::setbykey);
@@ -783,7 +828,6 @@ bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expi
     raise_warning("t_setbykey(): memcache_prepare_for_storage() returned null");
     return false;
   }
-
   memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
 
   uint64_t casInt = 0;

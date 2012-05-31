@@ -1157,7 +1157,53 @@ DefineFunction(
       ),
     ),
   ));  
-  
+
+ DefineFunction(
+  array(
+    'name'   => "casByKey",
+    'desc'   => "Memcache::casByKey() stores an item var with key on the memcached server. ",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The variable to store. Strings and integers are stored as is, other types are stored serialized.",
+      ),
+      array(
+        'name'   => "val",
+        'type'   => Variant,
+        'desc'   => "Use MEMCACHE_COMPRESSED to store the item compressed (uses zlib).",
+      ),
+      array(
+        'name'   => "flag",
+        'type'   => Int32,
+        'value'  => "0",
+        'desc'   => "Expiration time of the item. If it's equal to zero, the item will never expire. You can also use Unix timestamp or a number of seconds starting from current time, but in the latter case the number of seconds may not exceed 2592000 (30 days).",
+      ),
+      array(
+        'name'   => "expire",
+        'type'   => Int32,
+        'value'  => "0",
+      ),
+      array(
+        'name'   => "cas",
+        'type'   => Variant | Reference,
+        'value'  => "null",
+        'desc'   => "If present, cas fetched along with the values will be written to this parameter. ", 
+      ),
+      array(
+        'name'   => "shardKey",
+        'type'   => String,
+        'value'  => "null",
+        'desc'   => "The sharding key to identify the server in clcuster",
+      ),      
+    ),
+  ));
+ 
 DefineFunction(
   array(
     'name'   => "setByKey",
