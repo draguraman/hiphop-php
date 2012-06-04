@@ -56,8 +56,9 @@ void init_thread_locals(void *arg /* = NULL */) {
 }
 
 void finish_thread_locals(void *arg /* = NULL */) {
-  if (g_context.getNoCheck()) g_context.destroy();
+  // socket depends on file (yeah its wierd)
   if (g_persistentObjects.getNoCheck()) g_persistentObjects.destroy();
+  if (g_context.getNoCheck()) g_context.destroy();
 }
 
 static class SetThreadInitFini {
