@@ -49,45 +49,45 @@ CPP
 //      )
 // )
 
-DefineFunction(
-  array(
-    'name'   => "igbinary_serialize",
-    'desc'   => "Serialize an object into a string",
-    'flags'  =>  HasDocComment | AllowIntercept,
-    'return' => array(
-        'type'   => String,
-        'desc'   => "The serialized object",
-    ),
-    'args'   => array(
-      array(
-        'name'   => "var",
-        'type'   => Variant,
-        'desc'   => "The variable to serialize",
-      ),
-    ),
-    'taint_observer' => false,
-  ));
-
-DefineFunction(
-  array(
-    'name'   => "igbinary_unserialize",
-    'desc'   => "Unserialize a string back to object",
-    'flags'  =>  HasDocComment | AllowIntercept,
-    'return' => array(
-        'type'   => Variant,
-        'desc'   => "The restored object",
-    ),
-    'args'   => array(
-      array(
-        'name'   => "str",
-        'type'   => String,
-        'desc'   => "String representatin of the serialized object (output of igbinary_serialize)",
-      ),
-    ),
-    'taint_observer' => false,
-  ));
-
-///////////////////////////////////////////////////////////////////////////////
+//DefineFunction(
+//  array(
+//    'name'   => "igbinary_serialize",
+//    'desc'   => "Serialize an object into a string",
+//    'flags'  =>  HasDocComment | AllowIntercept,
+//    'return' => array(
+//        'type'   => String,
+//        'desc'   => "The serialized object",
+//    ),
+//    'args'   => array(
+//      array(
+//        'name'   => "var",
+//        'type'   => Variant,
+//        'desc'   => "The variable to serialize",
+//      ),
+//    ),
+//    'taint_observer' => false,
+//  ));
+//
+//DefineFunction(
+//  array(
+//    'name'   => "igbinary_unserialize",
+//    'desc'   => "Unserialize a string back to object",
+//    'flags'  =>  HasDocComment | AllowIntercept,
+//    'return' => array(
+//        'type'   => Variant,
+//        'desc'   => "The restored object",
+//    ),
+//    'args'   => array(
+//      array(
+//        'name'   => "str",
+//        'type'   => String,
+//        'desc'   => "String representatin of the serialized object (output of igbinary_serialize)",
+//      ),
+//    ),
+//    'taint_observer' => false,
+//  ));
+//
+/////////////////////////////////////////////////////////////////////////////////
 // Classes
 //
 // BeginClass

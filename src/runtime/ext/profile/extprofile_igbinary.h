@@ -25,16 +25,6 @@
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
-inline String x_igbinary_serialize(CVarRef var) {
-  FUNCTION_INJECTION_BUILTIN(igbinary_serialize);
-  return f_igbinary_serialize(var);
-}
-
-inline Variant x_igbinary_unserialize(CStrRef str) {
-  FUNCTION_INJECTION_BUILTIN(igbinary_unserialize);
-  return f_igbinary_unserialize(str);
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////
 }

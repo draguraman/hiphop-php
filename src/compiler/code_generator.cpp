@@ -235,7 +235,7 @@ std::string CodeGenerator::getFormattedName(const std::string &file) {
   int hash = hash_string(file.data(), file.size());
   // adding a random value to make the header differ from that used
   // in the runtime "generated" code
-  hash = hash + 28;
+  hash = hash + 27;
   formatted += boost::str(boost::format("%08x") % hash);
   return formatted;
 }
