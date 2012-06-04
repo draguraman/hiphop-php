@@ -55,6 +55,8 @@ public:
 
   static std::string ServerUser; // run server under this user account
 
+  static bool DumpCore;
+  static std::string DumpCorePath;
   static int  MaxLoopCount;
   static int  MaxSerializedStringSize;
   static bool NoInfiniteRecursionDetection;

@@ -80,7 +80,7 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(get);
   public: Variant t_get2(CVarRef key, VRefParam val, VRefParam flags = null, VRefParam cas = null);
   DECLARE_METHOD_INVOKE_HELPERS(get2);
-  public: Variant t_getl(CStrRef key, int timeout = 0, VRefParam flags = null);
+  public: Variant t_getl(CStrRef key, int timeout = 15, VRefParam flags = null);
   DECLARE_METHOD_INVOKE_HELPERS(getl);
   public: Variant t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRefParam flags = null, VRefParam cas = null);
   DECLARE_METHOD_INVOKE_HELPERS(getbykey);
@@ -126,6 +126,7 @@ class c_Memcache : public ExtObjectData, public Sweepable {
 
 
  private:
+  std::map<std::string, uint64_t> getl_cas_map;
   memcached_st m_memcache;
   int m_compress_threshold;
   double m_min_compress_savings;

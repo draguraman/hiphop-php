@@ -51,7 +51,6 @@ public:
   std::string hash_function;
   bool	      NullOnKeyMiss;
 
-  std::map<std::string, uint64_t> getl_cas_map;
 
   MEMCACHEGlobals() {}
 
@@ -65,11 +64,9 @@ public:
     IniSetting::Bind("memcache.hash_function",     "crc32",
                      ini_on_update_hash_function,  &hash_function);
 
-    getl_cas_map.clear();
   }
 
   virtual void requestShutdown() {
-    getl_cas_map.clear();
   }
 };
 
@@ -110,6 +107,7 @@ c_Memcache::c_Memcache(const ObjectStaticCallbacks *cb) :
   }
 
   memcached_create(&m_memcache);
+  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 1);
 
   if (MEMCACHEG(hash_strategy) == "consistent") {
     // need to hook up a global variable to set this
@@ -127,6 +125,7 @@ c_Memcache::c_Memcache(const ObjectStaticCallbacks *cb) :
     memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_HASH,
                            MEMCACHED_HASH_CRC);
   }
+  getl_cas_map.clear();
 }
 
 c_Memcache::~c_Memcache() {
@@ -135,6 +134,7 @@ c_Memcache::~c_Memcache() {
 
 void c_Memcache::t___construct() {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::__construct);
+  getl_cas_map.clear();
   return;
 }
 
@@ -433,10 +433,10 @@ bool c_Memcache::t_set(CStrRef key, CVarRef var, int flag /*= 0*/,
     return false;
   }
 
-  if( MEMCACHEG(getl_cas_map).find(key.c_str()) != MEMCACHEG(getl_cas_map).end() ) {
-    uint64_t cas = MEMCACHEG(getl_cas_map)[key.c_str()];
-    MEMCACHEG(getl_cas_map).erase(key.c_str());
-    return this->t_cas(key, var, flag, expire, cas);
+  if( getl_cas_map.find(key.c_str()) != getl_cas_map.end() ) {
+    uint64_t cas = getl_cas_map[key.c_str()];
+    getl_cas_map.erase(key.c_str());
+    return (this->t_cas(key, var, flag, expire, cas));
   }
 
   String serialized = memcache_prepare_for_storage(var, flag);
@@ -450,7 +450,6 @@ bool c_Memcache::t_set(CStrRef key, CVarRef var, int flag /*= 0*/,
   if (ret == MEMCACHED_SUCCESS) {
     return true;
   }
-
   return false;
 }
 
@@ -501,7 +500,13 @@ Variant c_Memcache::t_get(CVarRef key, VRefParam flags /*= null*/, VRefParam cas
 
   Variant data;
   VRefParam resultData(data);
-  Variant result2 = this->t_get2(key, resultData, flags, cas);
+  if (!flags.isReferenced() && !cas.isReferenced()) {
+    Variant result2 = this->t_get2(key, resultData);
+  } else if (!cas.isReferenced()) {
+    Variant result2 = this->t_get2(key, resultData, flags);
+  } else {
+    Variant result2 = this->t_get2(key, resultData, flags, cas);
+  }
   return resultData;
   }
 
@@ -530,8 +535,6 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
 
       memcached_result_st result;
 
-      memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 
-          cas.isReferenced() ? 1 : 0);
 
       memcached_return_t status = memcached_mget(&m_memcache, &real_keys[0],
                                               &key_len[0], real_keys.size());
@@ -574,7 +577,8 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
         flags_array.set(skey, (int)flag);
 
         if(cas.isReferenced()) {
-          cas_array.set(skey, (int64)memcached_result_cas(&result));
+          uint64_t cas_result = memcached_result_cas(&result);
+          cas_array.set(skey, (int64)cas_result);
         }
         return_val.set(skey, status == MEMCACHED_SUCCESS);
       }
@@ -618,8 +622,6 @@ Variant c_Memcache::t_get2(CVarRef key, VRefParam var, VRefParam flags /*= null*
       return false;
     }
 
-    memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 
-                            cas.isReferenced() ? 1 : 0);
 
     ret = memcached_mget(&m_memcache, &ckey, &ckeylen, 1);
 
@@ -692,15 +694,20 @@ Variant c_Memcache::t_getl(CStrRef key, int timeout/*= 0*/, VRefParam flags/* = 
     }
 
     if (ret == MEMCACHED_NOTFOUND) {
+      return null;
+    }
+
+    if (ret != MEMCACHED_SUCCESS) {
       return false;
     }
 
     Variant retval = memcache_fetch_from_storage(payload, payload_len, nFlags);
+
     free(payload);
     flags = (int)nFlags;
 
     if( cas ) {
-      MEMCACHEG(getl_cas_map)[key.c_str()] = cas;
+      getl_cas_map[key.c_str()] = cas;
     }
 
     return retval;
@@ -712,7 +719,6 @@ Variant c_Memcache::t_getbykey(CStrRef key, CStrRef shardKey, VRefParam val, VRe
   const char* key_ptr = key.c_str();
   size_t key_length = key.size();
 
-  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
 
   memcached_return_t status = memcached_mget_by_key(&m_memcache,
       shardKey.data(), shardKey.size(),
@@ -798,7 +804,6 @@ bool c_Memcache::t_casbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expi
     raise_warning("t_casbykey(): memcache_prepare_for_storage() returned null");
     return false;
   }
-  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
 
   uint64_t casInt = 0;
   if( cas.isReferenced() ) {
@@ -828,7 +833,6 @@ bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expi
     raise_warning("t_setbykey(): memcache_prepare_for_storage() returned null");
     return false;
   }
-  memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, cas.isReferenced() ? 1 : 0);
 
   uint64_t casInt = 0;
   if( cas.isReferenced() ) {
@@ -869,6 +873,21 @@ bool c_Memcache::t_delete(CStrRef key, int expire /*= 0*/) {
   memcached_return_t ret = memcached_delete(&m_memcache,
                                             key.c_str(), key.length(),
                                             expire);
+  if (ret == MEMCACHED_SERVER_ERROR) {
+        const char *error_str;
+	//Need to check for a temporary failure and throw an error
+        memcached_return_t error;
+        memcached_server_instance_st server = memcached_server_by_key(&m_memcache,
+				    key.c_str(), key.length(),
+				    &error);
+	error_str = memcached_server_error(server);
+	if (error_str) {
+		if(!strncmp(error_str,"temporary failure",strlen("temporary failure"))) {
+		raise_warning("Memcache::delete(): Failed to delete temporary failure. Item may be locked");
+		}
+		
+	}
+  }
   return (ret == MEMCACHED_SUCCESS);
 }
 
@@ -897,10 +916,25 @@ Variant c_Memcache::t_increment(CStrRef key, int offset /*= 1*/) {
   memcached_return_t ret = memcached_increment(&m_memcache, key.c_str(),
                                               key.length(), offset, &value);
 
-  if (ret == MEMCACHED_SUCCESS) {
-    return (int64)value;
+  if (ret == MEMCACHED_SERVER_ERROR) {
+        memcached_return_t error;
+        const char *error_str;
+        //Need to check for a temporary failure and throw an error
+        memcached_server_instance_st server = memcached_server_by_key(&m_memcache,
+                                            key.c_str(), key.length(),
+                                            &error);
+        error_str = memcached_server_error(server);
+        if(!strncmp(error_str,"temporary failure",strlen("temporary failure"))) {
+        raise_warning("Memcache::increment(): Failed to incr/decr, temporary failure. Item may be locked");
+
+        }
+	return false;
   }
-  return false;
+  if (ret!= MEMCACHED_SUCCESS) {
+	return false;
+  }
+
+  return (int64)value;
 }
 
 Variant c_Memcache::t_decrement(CStrRef key, int offset /*= 1*/) {
@@ -914,11 +948,26 @@ Variant c_Memcache::t_decrement(CStrRef key, int offset /*= 1*/) {
   memcached_return_t ret = memcached_decrement(&m_memcache, key.c_str(),
                                               key.length(), offset, &value);
 
-  if (ret == MEMCACHED_SUCCESS) {
-    return (int64)value;
+ if (ret == MEMCACHED_SERVER_ERROR) {
+        memcached_return_t error;
+        const char *error_str;
+        //Need to check for a temporary failure and throw an error
+        memcached_server_instance_st server = memcached_server_by_key(&m_memcache,
+                                            key.c_str(), key.length(),
+                                            &error);
+        error_str = memcached_server_error(server);
+        if(!strncmp(error_str,"temporary failure",strlen("temporary failure"))) {
+        raise_warning("Memcache::decrement(): Failed to incr/decr, temporary failure. Item may be locked");
+
+        }
+	return false;
   }
 
-  return false;
+  if (ret!= MEMCACHED_SUCCESS) {
+	return false;
+  }
+
+  return (int64)value;
 }
 
 bool c_Memcache::t_close() {

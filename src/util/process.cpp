@@ -22,7 +22,10 @@
 #include "text_color.h"
 
 #include <pwd.h>
-
+#include <runtime/base/runtime_option.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <stdlib.h>
 using namespace std;
 
 namespace HPHP {
@@ -281,9 +284,16 @@ void Process::Daemonize(const char *stdoutFile /* = "/dev/null" */,
     exit(EXIT_FAILURE);
   }
 
+  if (RuntimeOption::DumpCore) {
+    //change ulimit -c
+        struct rlimit core_limit;
+        core_limit.rlim_cur = RLIM_INFINITY;
+        core_limit.rlim_max = RLIM_INFINITY;
+        setrlimit(RLIMIT_CORE, &core_limit);
+  }
   /* Change the current working directory.  This prevents the current
      directory from being locked; hence not being able to remove it. */
-  if ((chdir("/")) < 0) {
+  if ((chdir(RuntimeOption::DumpCorePath.c_str())) < 0) {
     exit(EXIT_FAILURE);
   }
 

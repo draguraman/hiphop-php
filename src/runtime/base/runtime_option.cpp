@@ -44,6 +44,8 @@ bool RuntimeOption::IgnoreStatEnabled = false;
 const char *RuntimeOption::ExecutionMode = "";
 std::string RuntimeOption::BuildId;
 std::string RuntimeOption::PidFile = "www.pid";
+bool RuntimeOption::DumpCore = false;
+std::string RuntimeOption::DumpCorePath = "/mnt/logs/hiphop/";
 
 std::string RuntimeOption::LogFile;
 std::string RuntimeOption::LogFileSymLink;
@@ -591,6 +593,8 @@ void RuntimeOption::Load(Hdf &config, StringVec *overwrites /* = NULL */) {
   }
   {
     Hdf server = config["Server"];
+    DumpCore = server["DumpCore"].getBool(false);
+    DumpCorePath= server["DumpCorePath"].getString("/mnt/logs/hiphop");
     Hdf linkRewrites = server["LinkRewrites"];
     for (Hdf hdf = linkRewrites.firstChild(); hdf.exists(); hdf = hdf.next()) {
         ServerLinkRewrites[hdf["name"]] = hdf["rep"].getString();
