@@ -181,11 +181,17 @@ bool f_is_subclass_of(CVarRef class_or_object, CStrRef class_name) {
 }
 
 bool f_method_exists(CVarRef class_or_object, CStrRef method_name) {
+	String name = get_classname(class_or_object);
   const ClassInfo *classInfo =
-    ClassInfo::FindClass(get_classname(class_or_object));
+    ClassInfo::FindClass(name);
+	if (!classInfo) {
+	  AutoloadHandler::s_instance->invokeHandler(name);
+	}
+  classInfo =
+    ClassInfo::FindClass(name);
   if (classInfo) {
     ClassInfo *defClass;
-    return classInfo->hasMethod(method_name, defClass) != NULL;
+    return (classInfo->hasMethod(method_name, defClass) != NULL);
   }
   return false;
 }
