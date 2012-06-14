@@ -384,6 +384,10 @@ int RuntimeOption::ProfilerMaxTraceBuffer = 0;
 bool RuntimeOption::EnableScoreboard = false;
 std::string RuntimeOption::ScoreboardURI;
 
+bool RuntimeOption::McmuxEnabled = false;
+std::string RuntimeOption::McmuxSocketFile;
+bool RuntimeOption::McmuxUseBinary = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // keep this block after all the above static variables, or we will have
 // static variable dependency problems on initialization
@@ -1032,6 +1036,13 @@ void RuntimeOption::Load(Hdf &config, StringVec *overwrites /* = NULL */) {
 	EnableScoreboard = scoreboard.getBool(); // main switch
 
     ScoreboardURI = scoreboard["URI"].getString("server-status");
+  }
+
+  {
+  Hdf memcache = config["Memcache"];
+    McmuxEnabled = memcache["mcmux_enabled"].getBool();
+    McmuxSocketFile = memcache["mcmux_socket_file"].getString();
+    McmuxUseBinary = memcache["mcmux_use_binary"].getBool();
   }
 
   {

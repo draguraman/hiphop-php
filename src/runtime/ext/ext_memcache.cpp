@@ -35,6 +35,7 @@ IMPLEMENT_DEFAULT_EXTENSION(memcache);
 
 bool ini_on_update_hash_strategy(CStrRef value, void *p);
 bool ini_on_update_hash_function(CStrRef value, void *p);
+bool ini_on_update_dummy_function(CStrRef value, void *p);
 
 const int64 k_MEMCACHE_COMPRESSED           = MMC_COMPRESSED;
 const int64 k_MEMCACHE_COMPRESSED_LZO       = MMC_COMPRESSED_LZO;
@@ -51,7 +52,6 @@ public:
   std::string hash_function;
   bool	      NullOnKeyMiss;
 
-
   MEMCACHEGlobals() {}
 
   virtual void requestInit() {
@@ -64,7 +64,6 @@ public:
                      ini_on_update_hash_strategy,  &hash_strategy);
     IniSetting::Bind("memcache.hash_function",     "crc32",
                      ini_on_update_hash_function,  &hash_function);
-
   }
 
   virtual void requestShutdown() {
@@ -96,6 +95,11 @@ bool ini_on_update_hash_function(CStrRef value, void *p) {
   return true;
 }
 
+bool ini_on_update_dummy_function(CStrRef value, void *p) {
+  return true;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // methods
 
@@ -109,6 +113,25 @@ c_Memcache::c_Memcache(const ObjectStaticCallbacks *cb) :
 
   memcached_create(&m_memcache);
   memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 1);
+
+  if( RuntimeOption::McmuxEnabled ) {
+    const char* mcmuxServer = RuntimeOption::McmuxSocketFile.c_str();
+    if( mcmuxServer && strlen(mcmuxServer) > 0 ) {
+      m_memcache.proxy_enabled = true;
+
+      assert(strlen(mcmuxServer) < sizeof(m_memcache.proxy_hostname));
+      strncpy(m_memcache.proxy_hostname, mcmuxServer, sizeof(m_memcache.proxy_hostname));
+
+      m_memcache.proxy_user_binary = RuntimeOption::McmuxUseBinary;
+
+      raise_debugging("ext_memcache: mcmux enabled. socketFile=%s, useBinary=%d",
+        m_memcache.proxy_hostname, (int)m_memcache.proxy_user_binary);
+    }
+    else {
+      m_memcache.proxy_enabled = false;
+      raise_error("ext_memcache: failed to enable mcmux because mcmux_socket_file is empty.");
+    }
+  }
 
   if (MEMCACHEG(hash_strategy) == "consistent") {
     // need to hook up a global variable to set this

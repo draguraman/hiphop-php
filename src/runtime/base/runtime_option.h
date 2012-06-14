@@ -282,6 +282,10 @@ public:
   static bool EnableScoreboard;
   static std::string ScoreboardURI;
 
+  static bool McmuxEnabled;
+  static std::string McmuxSocketFile;
+  static bool McmuxUseBinary;
+
   static int64 MaxRSS;
   static int64 MaxRSSPollingCycle;
   static int64 DropCacheCycle;
