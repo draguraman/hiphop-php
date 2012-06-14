@@ -123,6 +123,10 @@ class c_SimpleXMLElement :
   xmlXPathContextPtr m_xpath;
  public:
   Array __populate_m_array();
+  virtual bool customSerializer() const {
+	return m_is_text;
+  };
+  void customSerialize(VariableSerializer *serializer) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

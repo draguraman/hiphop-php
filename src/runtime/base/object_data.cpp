@@ -1425,8 +1425,12 @@ void ObjectData::serialize(VariableSerializer *serializer) const {
         }
       }
     } else {
-      serializer->setObjectInfo(o_getClassName(), o_getId());
-      o_toArray().serialize(serializer, true);
+      if (customSerializer()) {
+         customSerialize(serializer);
+      } else {
+         serializer->setObjectInfo(o_getClassName(), o_getId());
+         o_toArray().serialize(serializer, true);
+      }
     }
   }
   serializer->decNestedLevel((void*)this);

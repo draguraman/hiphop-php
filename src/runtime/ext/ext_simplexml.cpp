@@ -20,6 +20,7 @@
 #include <runtime/ext/ext_domdocument.h>
 #include <runtime/base/class_info.h>
 #include <runtime/base/util/request_local.h>
+#include <runtime/base/variable_serializer.h>
 
 #include <system/lib/systemlib.h>
 namespace HPHP {
@@ -583,7 +584,7 @@ Array removeComment(Variant m_children, CStrRef ns, bool is_prefix) {
           }
         }
       } else if (iter.second().isString()) {
-      		props.set(0,iter.second());
+      		//props.set(0,iter.second());
       }
     }
 		return props;
@@ -808,7 +809,20 @@ String c_SimpleXMLElement::t___tostring() {
   }
   return "";
 }
-
+void c_SimpleXMLElement::customSerialize(VariableSerializer *serializer) const {
+  if (m_is_text) {
+     ArrayIter iter(m_children);
+     if (iter) {
+	Variant prop;
+        prop = iter.second();
+	if (prop.isString()) {
+		prop.toString().serialize(serializer);
+		return;
+	}
+     }
+  }
+  serializer->writeNull(); 
+}
 Variant *c_SimpleXMLElement::___lval(Variant v_name) {
   return &m_children.lvalAt(v_name);
 }

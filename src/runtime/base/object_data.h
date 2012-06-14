@@ -78,7 +78,9 @@ class ObjectData : public CountableNF {
     RealPropNoDynamic = 4,// Dont return dynamic properties
     RealPropUnchecked = 8,// Dont check property accessibility
   };
-
+  virtual bool customSerializer() const {
+	return false;
+  }
   ObjectData(const ObjectStaticCallbacks *cb, bool isResource) :
       o_attribute(0), o_callbacks(cb) {
     if (!isResource) {
@@ -267,6 +269,7 @@ class ObjectData : public CountableNF {
   // misc
   Variant o_throw_fatal(const char *msg);
   virtual void serialize(VariableSerializer *serializer) const;
+  virtual void customSerialize(VariableSerializer *serializer) const {}
   virtual void dump() const;
   virtual ObjectData *clone();
   virtual void setRoot(ObjectData *root) {}
