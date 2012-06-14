@@ -979,7 +979,7 @@ void c_SimpleXMLElement::__attach_attributes() {
 }
 
 bool c_SimpleXMLElement::o_toBoolean() const {
-  if (m_is_text) {
+  if (m_is_text && (m_children[0].toString().size() == 0) ) {
       return false;
   }
 
@@ -989,19 +989,29 @@ bool c_SimpleXMLElement::o_toBoolean() const {
 int64 c_SimpleXMLElement::o_toInt64() const {
   Variant prop;
   ArrayIter iter(m_children);
-  if (iter) {
+  while (!iter.end()) {
     prop = iter.second();
+    if (prop.isString()) {
+      return prop.toString().toInt64();
+    }
+    ++iter;
   }
-  return prop.toString().toInt64();
+
+  return 0;
 }
 
 double c_SimpleXMLElement::o_toDouble() const {
   Variant prop;
   ArrayIter iter(m_children);
-  if (iter) {
+  while (!iter.end()) {
     prop = iter.second();
+    if (prop.isString()) {
+      return prop.toString().toDouble();
+    }
+    ++iter;
   }
-  return prop.toString().toDouble();
+
+  return 0;
 }
 
 Array c_SimpleXMLElement::o_toArray() const {

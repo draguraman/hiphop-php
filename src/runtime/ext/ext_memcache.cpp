@@ -55,7 +55,8 @@ public:
   MEMCACHEGlobals() {}
 
   virtual void requestInit() {
-    NullOnKeyMiss = true;
+    //NullOnKeyMiss = true;
+    NullOnKeyMiss = false;
     hash_strategy = "standard";
     hash_function = "crc32";
 
