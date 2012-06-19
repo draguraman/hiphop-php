@@ -1112,9 +1112,31 @@ Variant c_SimpleXMLElement::t_offsetget(CVarRef index) {
       }
       return this;
     }
+		if ( m_children[index].isString()) {
+			c_SimpleXMLElement *e = NEWOBJ(c_SimpleXMLElement)();
+			e->m_doc = this->m_doc;
+			e->m_node = this->m_node;
+			e->m_children.set(0,m_children[index]);
+			e->m_array.set(0,m_children[index]);
+			e->m_is_text = this->m_is_text;
+			e->m_is_attribute = this->m_is_attribute;
+			e->m_is_property = true;
+			return e;
+		}
     return m_children[index];
   }
-  return m_attributes[index];
+	if (m_attributes[index] == null) {
+		return m_attributes[index];
+	}
+	c_SimpleXMLElement *e = NEWOBJ(c_SimpleXMLElement)();
+	e->m_doc = this->m_doc;
+	e->m_node = this->m_node;
+	e->m_children.set(0,m_attributes[index]);
+	e->m_array.set(0,m_attributes[index]);
+	e->m_is_text = this->m_is_text;
+	e->m_is_attribute = this->m_is_attribute;
+	e->m_is_property = true;
+	return e;
 }
 
 void c_SimpleXMLElement::t_offsetset(CVarRef index, CVarRef newvalue) {
