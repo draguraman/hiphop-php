@@ -339,8 +339,6 @@ void LibEventServer::onRequest(struct evhttp_request *request) {
                                   RuntimeOption::ConnectionTimeoutSeconds);
   }
   if (getStatus() == RUNNING) {
-    // new request so mark it as may reply
-    request->flags |= EVHTTP_MAYSEND;
     m_dispatcher.enqueue(LibEventJobPtr(new LibEventJob(request)));
   } else {
     Logger::Error("throwing away one new request while shutting down");
@@ -433,7 +431,6 @@ void PendingResponseQueue::enqueue(int worker, ResponsePtr response) {
 
 void PendingResponseQueue::enqueue(int worker, evhttp_request *request,
                                    int code, int nwritten) {
-  request->flags |= EVHTTP_MAYSEND;
   ResponsePtr res(new Response());
   res->request = request;
   res->code = code;
@@ -446,7 +443,6 @@ void PendingResponseQueue::enqueue(int worker, evhttp_request *request,
                                    bool firstChunk) {
   ResponsePtr res(new Response());
   res->request = request;
-  request->flags |= EVHTTP_MAYSEND;
   res->code = code;
   res->chunked = true;
   res->chunk = chunk;
@@ -457,7 +453,6 @@ void PendingResponseQueue::enqueue(int worker, evhttp_request *request,
 void PendingResponseQueue::enqueue(int worker, evhttp_request *request) {
   ResponsePtr res(new Response());
   res->request = request;
-  request->flags |= EVHTTP_MAYSEND;
   res->chunked = true;
   enqueue(worker, res);
 }
