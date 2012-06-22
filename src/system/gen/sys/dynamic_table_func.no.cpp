@@ -2246,6 +2246,14 @@ Variant i_imagecopy(void *extra, CArrRef params) {
     return (x_imagecopy(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
   }
 }
+Variant ifa_igbinary_unserialize(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 1)) return throw_wrong_arguments("igbinary_unserialize", count, 1, 1, 1);
+  CVarRef arg0(a0);
+  return (x_igbinary_unserialize(arg0));
+}
+Variant i_igbinary_unserialize(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_igbinary_unserialize);
+}
 Variant ifa_is_subclass_of(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 2)) return throw_wrong_arguments("is_subclass_of", count, 2, 2, 1);
   CVarRef arg0(a0);
@@ -17086,6 +17094,14 @@ Variant ifa_posix_getpwuid(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
 Variant i_posix_getpwuid(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_posix_getpwuid);
 }
+Variant ifa_igbinary_serialize(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 1)) return throw_wrong_arguments("igbinary_serialize", count, 1, 1, 1);
+  CVarRef arg0(a0);
+  return (x_igbinary_serialize(arg0));
+}
+Variant i_igbinary_serialize(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_igbinary_serialize);
+}
 Variant ifa_dom_element_set_id_attribute_node(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 3)) return throw_wrong_arguments("dom_element_set_id_attribute_node", count, 3, 3, 1);
   CVarRef arg0(a0);
@@ -21623,6 +21639,7 @@ CallInfo ci_parse_str((void*)&i_parse_str, (void*)&ifa_parse_str, 2, 0, 0x000000
 CallInfo ci_bccomp((void*)&i_bccomp, (void*)&ifa_bccomp, 3, 0, 0x0000000000000000LL);
 CallInfo ci_dom_element_get_attribute_node_ns((void*)&i_dom_element_get_attribute_node_ns, (void*)&ifa_dom_element_get_attribute_node_ns, 3, 0, 0x0000000000000000LL);
 CallInfo ci_imagecopy((void*)&i_imagecopy, (void*)&ifa_imagecopy, 8, 0, 0x0000000000000000LL);
+CallInfo ci_igbinary_unserialize((void*)&i_igbinary_unserialize, (void*)&ifa_igbinary_unserialize, 1, 0, 0x0000000000000000LL);
 CallInfo ci_is_subclass_of((void*)&i_is_subclass_of, (void*)&ifa_is_subclass_of, 2, 0, 0x0000000000000000LL);
 CallInfo ci_array_fill_keys((void*)&i_array_fill_keys, (void*)&ifa_array_fill_keys, 2, 0, 0x0000000000000000LL);
 CallInfo ci_magickmodulateimage((void*)&i_magickmodulateimage, (void*)&ifa_magickmodulateimage, 4, 0, 0x0000000000000000LL);
@@ -23108,6 +23125,7 @@ CallInfo ci_openssl_encrypt((void*)&i_openssl_encrypt, (void*)&ifa_openssl_encry
 CallInfo ci_imap_binary((void*)&i_imap_binary, (void*)&ifa_imap_binary, 1, 0, 0x0000000000000000LL);
 CallInfo ci_ob_get_status((void*)&i_ob_get_status, (void*)&ifa_ob_get_status, 1, 0, 0x0000000000000000LL);
 CallInfo ci_posix_getpwuid((void*)&i_posix_getpwuid, (void*)&ifa_posix_getpwuid, 1, 0, 0x0000000000000000LL);
+CallInfo ci_igbinary_serialize((void*)&i_igbinary_serialize, (void*)&ifa_igbinary_serialize, 1, 0, 0x0000000000000000LL);
 CallInfo ci_dom_element_set_id_attribute_node((void*)&i_dom_element_set_id_attribute_node, (void*)&ifa_dom_element_set_id_attribute_node, 3, 0, 0x0000000000000000LL);
 CallInfo ci_gzuncompress((void*)&i_gzuncompress, (void*)&ifa_gzuncompress, 2, 0, 0x0000000000000000LL);
 CallInfo ci_array_unshift((void*)&i_array_unshift, (void*)&ifa_array_unshift, 2, 1, 0x0000000000000001LL);
@@ -25035,6 +25053,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 1028:
       HASH_GUARD(0x2B12B0E9109D0404LL, iptcembed) {
         ci = &ci_iptcembed;
+        return true;
+      }
+      break;
+    case 1031:
+      HASH_GUARD(0x1FE167DE94916407LL, igbinary_unserialize) {
+        ci = &ci_igbinary_unserialize;
         return true;
       }
       break;
@@ -30453,6 +30477,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 4527:
       HASH_GUARD(0x5B1F9C2E9FE111AFLL, fb_utf8ize) {
         ci = &ci_fb_utf8ize;
+        return true;
+      }
+      break;
+    case 4528:
+      HASH_GUARD(0x19E0EBB6A2D7B1B0LL, igbinary_serialize) {
+        ci = &ci_igbinary_serialize;
         return true;
       }
       break;
