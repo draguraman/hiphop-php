@@ -345,6 +345,16 @@ class Variant {
   }
 
   void *asDataPtr() const {
+      if (m_type == KindOfArray) {
+	if (m_data.parr->size() == 0) {
+		if (m_data.parr->isStatic()) {
+			return (void*)this;
+		}
+	}
+      } else if (m_type == KindOfVariant && m_data.pvar->m_type == KindOfArray) {
+   return m_data.pvar;
+}
+
       return m_type == KindOfVariant ? m_data.pvar->asDataPtr() : (void*)m_data.pvar;
     }
 

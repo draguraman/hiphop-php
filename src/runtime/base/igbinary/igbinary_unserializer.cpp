@@ -93,7 +93,7 @@ int IGBinaryUnserializer::igbinary_unserialize_data_init(
   igsd->strings_capacity = 4;
 
   igsd->error = 0;
-
+  igsd->lookingForRef = false;
   igsd->strings = (struct igbinary_unserialize_string_pair *) malloc(
       sizeof(struct igbinary_unserialize_string_pair) * igsd->strings_capacity);
   if (igsd->strings == NULL) {
@@ -262,6 +262,10 @@ int IGBinaryUnserializer::igbinary_unserialize_long(
 
   z.assignVal(ret);
 
+  if (igsd->lookingForRef) {
+    igsd->m_refs.push_back(&z);
+    igsd->lookingForRef = false;
+  }  
   return 0;
 }
 /* }}} */
@@ -284,7 +288,10 @@ int IGBinaryUnserializer::igbinary_unserialize_double(
   u.u = igbinary_unserialize64(igsd TSRMLS_CC);
 
   z.assignVal(u.d);
-
+  if (igsd->lookingForRef) {
+    igsd->m_refs.push_back(&z);
+    igsd->lookingForRef = false;
+  } 
   return 0;
 }
 /* }}} */
@@ -324,6 +331,10 @@ int IGBinaryUnserializer::igbinary_unserialize_string(
   }
 
   z = NEW(StringData)(igsd->strings[i].data, igsd->strings[i].len, CopyString);
+  if (igsd->lookingForRef) {
+    igsd->m_refs.push_back(&z);
+    igsd->lookingForRef = false;
+  } 
   return 0;
 }
 /* }}} */
@@ -397,6 +408,10 @@ int IGBinaryUnserializer::igbinary_unserialize_chararray(
       igsd->strings[igsd->strings_count].len, CopyString);
 
   igsd->strings_count += 1;
+  if (igsd->lookingForRef) {
+    igsd->m_refs.push_back(&z);
+    igsd->lookingForRef = false;
+  } 
 
   return 0;
 }
@@ -447,6 +462,7 @@ int IGBinaryUnserializer::igbinary_unserialize_array(
 
   if( z.isArray() ) {
     igsd->m_refs.push_back(&z);
+    igsd->lookingForRef = false;
   }
 
   /* empty array */
@@ -740,7 +756,7 @@ int IGBinaryUnserializer::igbinary_unserialize_object(
   z = obj;
 
   igsd->m_refs.push_back(&z);
-
+      igsd->lookingForRef = false;
   /* store incomplete class name */
 //  if (incomplete_class) {
 //    php_store_class_name(*z, name, name_len);
@@ -820,7 +836,12 @@ int IGBinaryUnserializer::igbinary_unserialize_ref(
     return 1;
   }
 
-  z.assignRef(*(igsd->m_refs[(int)n]));
+  if (igsd->lookingForRef) {
+    z.assignRef(*(igsd->m_refs[(int)n]));
+    igsd->lookingForRef = false;
+  } else {
+    z.assignVal(*(igsd->m_refs[(int)n]));
+  }
   return 0;
 }
 /* }}} */
@@ -836,9 +857,9 @@ int IGBinaryUnserializer::igbinary_unserialize_zval(
   }
 
   t = (enum igbinary_type) igbinary_unserialize8(igsd TSRMLS_CC);
-
   switch (t) {
     case igbinary_type_ref:
+      igsd->lookingForRef = true;
       if (igbinary_unserialize_zval(igsd, z TSRMLS_CC)) {
         raise_warning(
             "igbinary_unserialize_ref failed type='%02x' igsd-position=%zu", t,
@@ -849,19 +870,18 @@ int IGBinaryUnserializer::igbinary_unserialize_zval(
       /* Scalar types should be added to the references hash */
       /* unless they're already added */
       /* in references list: marked as ref */
-      if( !IS_REFCOUNTED_TYPE(z.getType()) )
-        switch (z.getType()) {
+      /*if( !IS_REFCOUNTED_TYPE(z.getType()) )*/
+      /*  switch (z.getRawType()) {
           case IS_STRING:
           case IS_STATIC_STRING:
           case IS_LONG:
           case IS_NULL:
           case IS_DOUBLE:
-          case IS_BOOL:
-            /* reference */
+          case IS_BOOL: 
             igsd->m_refs.push_back(&z);
           default:
             break;
-        }
+        }*/
 //      Z_SET_ISREF_TO_PP(z, true);
 //      z.incRefCount(); //wli-TODO
       break;
@@ -895,7 +915,8 @@ int IGBinaryUnserializer::igbinary_unserialize_zval(
     case igbinary_type_array16:
     case igbinary_type_array32:
     {
-      z = Array::Create();
+      Array v = Array::Create();
+      z = v;
       if( igbinary_unserialize_array(igsd, t, z TSRMLS_CC) ) {
         raise_warning(
             "igbinary_unserialize_array failed type='%02x' igsd-position=%zu",

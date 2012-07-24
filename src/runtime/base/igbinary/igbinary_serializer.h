@@ -83,13 +83,13 @@ private:
   inline static int igbinary_serialize_string(struct igbinary_serialize_data *igsd, const char *s, size_t len TSRMLS_DC);
   inline static int igbinary_serialize_chararray(struct igbinary_serialize_data *igsd, const char *s, size_t len TSRMLS_DC);
 
-  inline static int igbinary_serialize_array(struct igbinary_serialize_data *igsd, CVarRef z, const ClassInfo* clsInfo, bool incomplete_class TSRMLS_DC);
-  inline static int igbinary_serialize_array_ref(struct igbinary_serialize_data *igsd, CVarRef z, bool object TSRMLS_DC);
+  inline static int igbinary_serialize_array(struct igbinary_serialize_data *igsd, CVarRef z, const ClassInfo* clsInfo, bool incomplete_class TSRMLS_DC, void *objIndex = NULL);
+  inline static int igbinary_serialize_array_ref(struct igbinary_serialize_data *igsd, CVarRef z, bool object TSRMLS_DC, void *objIndex = NULL);
   inline static int igbinary_serialize_array_sleep(struct igbinary_serialize_data *igsd, CVarRef z, CArrRef ht, const ObjectData *ce, bool incomplete_class, const ClassInfo* clsInfo TSRMLS_DC);
   inline static int igbinary_serialize_object_name(struct igbinary_serialize_data *igsd, const char *name, size_t name_len TSRMLS_DC);
   inline static int igbinary_serialize_object(struct igbinary_serialize_data *igsd, CVarRef z TSRMLS_DC);
 
-  static int igbinary_serialize_zval(struct igbinary_serialize_data *igsd, CVarRef z TSRMLS_DC);
+  static int igbinary_serialize_zval(struct igbinary_serialize_data *igsd, CVarRef z TSRMLS_DC, void * objIndex = NULL);
 
   static void writeSerializedProperty(struct igbinary_serialize_data *igsd, CStrRef prop, const ClassInfo *cls);
 

@@ -251,7 +251,7 @@ public:
                              std::vector<String> *clsConstants);
 
   static void GetArray(const ObjectData *obj, const ClassPropTable *ct,
-                       Array &props, bool pubOnly);
+                       Array &props, bool pubOnly, Array* odata = NULL);
   static void SetArray(ObjectData *obj, const ClassPropTable *ct, CArrRef props);
   static void SetHook(ClassInfoHook *hook) { s_hook = hook; }
 

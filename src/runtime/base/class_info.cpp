@@ -971,12 +971,18 @@ Variant ClassPropTable::getInitVal(const ClassPropTableEntry *prop) const {
 }
 
 void ClassInfo::GetArray(const ObjectData *obj, const ClassPropTable *ct,
-                         Array &props, bool pubOnly) {
+                         Array &props, bool pubOnly, Array *odata/* = Null*/) {
   while (ct) {
     const ClassPropTableEntry *p = ct->m_entries;
     int off = ct->m_offset;
     if (off >= 0) do {
       p += off;
+      if (odata) {
+	Array pe = Array::Create();
+        pe.set("type",(p->type));	
+        pe.set("offset",(p->offset));	
+	odata->set(p->keyName->lastToken((char)0),pe,true);
+      }
       if (!pubOnly || p->isPublic()) {
         if (p->isOverride()) {
           /* The actual property is stored in a base class,
@@ -995,6 +1001,7 @@ void ClassInfo::GetArray(const ObjectData *obj, const ClassPropTable *ct,
         }
         Variant v = p->getVariant(addr);
         if (p->isPrivate()) {
+ 
           props.add(*p->keyName, v, true);
         } else {
           props.set(*p->keyName, v, true);

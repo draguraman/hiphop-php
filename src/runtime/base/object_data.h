@@ -181,6 +181,7 @@ class ObjectData : public CountableNF {
 
   // properties
   virtual Array o_toArray() const;
+  virtual Array o_toArray_withInfo(Array* p) const;
   virtual Array o_toIterArray(CStrRef context, bool getRef = false);
   virtual Array o_getDynamicProperties() const;
   void *o_realPropPtr(CStrRef propName, int flags, DataType *retType, bool forceVariant,

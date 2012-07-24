@@ -62,6 +62,7 @@ class IGBinaryUnserializer {
 //      size_t references_count; /**< Unserialized array/objects count. */
 //      size_t references_capacity; /**< Unserialized array/object array capacity. */
 
+      bool lookingForRef;
       int error; /**< Error number. Not used. */
       // wli-todo: remove php_smart_str_public.h
 //      smart_str string0_buf; /**< Temporary buffer for strings */

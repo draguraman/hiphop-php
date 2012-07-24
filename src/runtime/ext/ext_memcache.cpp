@@ -110,7 +110,6 @@ c_Memcache::c_Memcache(const ObjectStaticCallbacks *cb) :
   if(!memcache_lzo_enabled) {
     raise_error("memcache_lzo_enabled=false. lzo_init() failed.");
   }
-
   memcached_create(&m_memcache);
   memcached_behavior_set(&m_memcache, MEMCACHED_BEHAVIOR_SUPPORT_CAS, 1);
 

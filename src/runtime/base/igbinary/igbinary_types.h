@@ -79,11 +79,11 @@ enum DataType {
 };
   */
 
-#define Z_ISREF_P(z) z.isReferenced()
-#define Z_TYPE_P(z) (!z.isInitialized() ? IS_NULL : (z.isResource() ? IS_RESOURCE : z.getType()))
+#define Z_ISREF_P(z) (z.getRawType() == KindOfVariant)
+#define Z_TYPE_P(z) (!z.isInitialized() ? IS_NULL : (z.isResource() ? IS_RESOURCE : ((z.getType() == KindOfInt32)?IS_LONG:z.getType())))
 
-#define Z_STRVAL_P(zval_p)      ((char *)(zval_p).asCStrRef().data())
-#define Z_STRLEN_P(zval_p)      (zval_p).asCStrRef().size()
+#define Z_STRVAL_P(zval_p)      ((char *)(zval_p).toString().c_str())
+#define Z_STRLEN_P(zval_p)      (zval_p).toString().size()
 
 #define Z_LVAL_P(zval)          (zval).toInt32()
 #define Z_DVAL_P(zval)          (zval).toDouble()

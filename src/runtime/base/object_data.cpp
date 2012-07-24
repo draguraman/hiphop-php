@@ -1157,6 +1157,13 @@ Variant *ObjectData::o_weakLval(CStrRef propName,
   return NULL;
 }
 
+Array ObjectData::o_toArray_withInfo(Array *p) const {
+  Array ret(ArrayData::Create());
+  ObjectData *root = const_cast<ObjectData*>(this)->getRoot();
+  ClassInfo::GetArray(root, root->o_getClassPropTable(), ret, false,p);
+  return ret;
+}
+
 Array ObjectData::o_toArray() const {
   Array ret(ArrayData::Create());
   ObjectData *root = const_cast<ObjectData*>(this)->getRoot();
