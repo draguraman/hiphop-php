@@ -525,9 +525,9 @@ int IGBinarySerializer::igbinary_serialize_array(
 		}
 		} else if (z.getType() == KindOfArray) {
 			if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
-			   p = z.toArray().lvalPtr(key.toCStrRef(),true, false);	
+			   p = z.toArray().lvalPtr(key.toCStrRef(),false,false);	
 			} else {
-			   p = z.toArray().lvalPtr(key.asInt64Val(),true, false);	
+			   p = z.toArray().lvalPtr(key.asInt64Val(),false, false);	
 			}
 		} else  {
 			raise_error("Invalid type of object seen in serialize array");
@@ -851,7 +851,6 @@ int IGBinarySerializer::igbinary_serialize_zval(
         /* otherwise fall through */
     }
   }
- 
   switch (Z_TYPE_P(z)) {
     case IS_RESOURCE:
       return igbinary_serialize_null(igsd TSRMLS_CC);
