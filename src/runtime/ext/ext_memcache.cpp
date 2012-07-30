@@ -886,6 +886,52 @@ bool c_Memcache::t_setbykey(CStrRef key, CVarRef val, int flag /*= 0*/, int expi
   return status == MEMCACHED_SUCCESS;
 }
 
+bool c_Memcache::t_unlock(CStrRef key) {
+  INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::unlock);
+  if (key.empty()) {
+    raise_warning("Key cannot be empty");
+    return false;
+  }
+
+  uint64_t cas = 0;
+  if( getl_cas_map.find(key.c_str()) != getl_cas_map.end() ) {
+    cas = getl_cas_map[key.c_str()];
+  }
+  else {
+    return false;
+  }
+
+  int cas_delete = 0;
+  memcached_return_t ret = memcached_unlock(&m_memcache,
+                                            key.c_str(), key.length(),
+                                            cas);
+  if (ret == MEMCACHED_SERVER_ERROR) {
+        const char *error_str;
+        //Need to check for a temporary failure and throw an error
+        memcached_return_t error;
+        memcached_server_instance_st server = memcached_server_by_key(&m_memcache,
+                                    key.c_str(), key.length(),
+                                    &error);
+        error_str = memcached_server_error(server);
+        if (error_str) {
+                if(!strncmp(error_str,"temporary failure",strlen("temporary failure"))) {
+                raise_warning("Memcache::unlock(): Failed to unlock temporary failure.");
+                }
+
+        }
+  }
+
+  if(ret == MEMCACHED_SUCCESS){
+    cas_delete = 1;
+  }
+
+  if(cas_delete) {
+    getl_cas_map.erase(key.c_str());
+  }
+
+  return (ret == MEMCACHED_SUCCESS);
+}
+
 bool c_Memcache::t_delete(CStrRef key, int expire /*= 0*/) {
   INSTANCE_METHOD_INJECTION_BUILTIN(Memcache, Memcache::delete);
   if (key.empty()) {
@@ -1267,6 +1313,11 @@ Variant f_memcache_get(CObjRef memcache, CVarRef key,
 bool f_memcache_delete(CObjRef memcache, CStrRef key, int expire /* = 0 */) {
   c_Memcache *memcache_obj = memcache.getTyped<c_Memcache>();
   return memcache_obj->t_delete(key, expire);
+}
+
+bool f_memcache_unlock(CObjRef memcache, CStrRef key) {
+  c_Memcache *memcache_obj = memcache.getTyped<c_Memcache>();
+  return memcache_obj->t_unlock(key);
 }
 
 Variant f_memcache_increment(CObjRef memcache, CStrRef key,

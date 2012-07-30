@@ -343,6 +343,30 @@ DefineFunction(
 
 DefineFunction(
   array(
+    'name'   => "memcache_unlock",
+    'desc'   => "Memcache::unlock() unlocks item with the key.",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "memcache",
+        'type'   => Object,
+        'desc'   => "The Memcache instance.",
+      ),
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The key associated with the item to unlock.",
+      ),
+    ),
+    'taint_observer' => false,
+  ));
+
+DefineFunction(
+  array(
     'name'   => "memcache_delete",
     'desc'   => "Memcache::delete() deletes item with the key. If parameter timeout is specified, the item will expire after timeout seconds. Also you can use memcache_delete() function.",
     'flags'  =>  HasDocComment,
@@ -1250,6 +1274,23 @@ DefineFunction(
     ),
   ));
   
+DefineFunction(
+  array(
+    'name'   => "unlock",
+    'desc'   => "Memcache::unlock() unlocks item with the key.",
+    'flags'  =>  HasDocComment,
+    'return' => array(
+      'type'   => Boolean,
+      'desc'   => "Returns TRUE on success or FALSE on failure.",
+    ),
+    'args'   => array(
+      array(
+        'name'   => "key",
+        'type'   => String,
+        'desc'   => "The key associated with the item to unlock.",
+      ),
+    ),
+  ));
 
 DefineFunction(
   array(

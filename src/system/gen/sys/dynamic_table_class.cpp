@@ -7764,6 +7764,7 @@ CallInfo c_Memcache::ci_set((void*)&c_Memcache::i_set, (void*)&c_Memcache::ifa_s
 CallInfo c_Memcache::ci_pconnect((void*)&c_Memcache::i_pconnect, (void*)&c_Memcache::ifa_pconnect, 4, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_getversion((void*)&c_Memcache::i_getversion, (void*)&c_Memcache::ifa_getversion, 0, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_connect((void*)&c_Memcache::i_connect, (void*)&c_Memcache::ifa_connect, 4, 4, 0x0000000000000000LL);
+CallInfo c_Memcache::ci_unlock((void*)&c_Memcache::i_unlock, (void*)&c_Memcache::ifa_unlock, 1, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_setbykey((void*)&c_Memcache::i_setbykey, (void*)&c_Memcache::ifa_setbykey, 6, 4, 0x0000000000000010LL);
 CallInfo c_Memcache::ci_deletebykey((void*)&c_Memcache::i_deletebykey, (void*)&c_Memcache::ifa_deletebykey, 3, 4, 0x0000000000000000LL);
 CallInfo c_Memcache::ci_setserverparams((void*)&c_Memcache::i_setserverparams, (void*)&c_Memcache::ifa_setserverparams, 6, 4, 0x0000000000000000LL);
@@ -7823,6 +7824,9 @@ Variant c_Memcache::i_casbykey(MethodCallPackage &mcp, CArrRef params) {
 }
 Variant c_Memcache::i_setbykey(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_setbykey);
+}
+Variant c_Memcache::i_unlock(MethodCallPackage &mcp, CArrRef params) {
+  return invoke_meth_few_handler(mcp, params, &ifa_unlock);
 }
 Variant c_Memcache::i_delete(MethodCallPackage &mcp, CArrRef params) {
   return invoke_meth_few_handler(mcp, params, &ifa_delete);
@@ -8086,6 +8090,15 @@ Variant c_Memcache::ifa_setbykey(MethodCallPackage &mcp, int count, INVOKE_FEW_A
   CVarRef arg5(a5);
   return (self->t_setbykey(arg0, arg1, arg2, arg3, arg4, arg5));
 }
+Variant c_Memcache::ifa_unlock(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(mcp.obj == 0)) {
+    return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_unlock, coo_Memcache);
+  }
+  c_Memcache *self ATTRIBUTE_UNUSED (static_cast<c_Memcache*>(mcp.obj));
+  if (UNLIKELY(count != 1)) return throw_wrong_arguments("unlock", count, 1, 1, 1);
+  CVarRef arg0(a0);
+  return (self->t_unlock(arg0));
+}
 Variant c_Memcache::ifa_delete(MethodCallPackage &mcp, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(mcp.obj == 0)) {
     return ObjectData::ifa_dummy(mcp, count, INVOKE_FEW_ARGS_PASS_ARGS, ifa_delete, coo_Memcache);
@@ -8299,6 +8312,7 @@ const MethodCallInfoTable c_Memcache::s_call_info_table[] = {
   { 0x7F4CB6AD55C9F7B8LL, 1, 8, "setByKey", &c_Memcache::ci_setbykey },
   { 0x742B441E13CD7279LL, 1, 8, "pconnect", &c_Memcache::ci_pconnect },
   { 0x50BC469CFA9BF579LL, 0, 8, "casByKey", &c_Memcache::ci_casbykey },
+  { 0x4E582F9C77C19A39LL, 0, 6, "unlock", &c_Memcache::ci_unlock },
   { 0x6A3D9F8EDB005E7ALL, 1, 5, "flush", &c_Memcache::ci_flush },
   { 0x1780351E8EFF92BDLL, 1, 15, "setserverparams", &c_Memcache::ci_setserverparams },
   { 0x7032C660AD16D7FELL, 1, 7, "connect", &c_Memcache::ci_connect },
@@ -8313,7 +8327,7 @@ const int c_Memcache::s_call_info_index[] = {
   -1,14,-1,-1,-1,16,18,-1,
   19,-1,-1,20,-1,-1,-1,-1,
   -1,-1,21,22,-1,-1,-1,-1,
-  23,24,26,-1,-1,27,28,-1,
+  23,24,27,-1,-1,28,29,-1,
 
 };
 c_Memcache *c_Memcache::create() {
