@@ -635,10 +635,8 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
     }
 
     String name = varName.toString();
-    CVarRef val = od->o_exists(name, od->o_getClassName()) ?
-        const_cast<ObjectData*>(od)->o_getUnchecked(name, od->o_getClassName()) : null;
-
-    if( val.isNull() ) {
+    CVarRef val = const_cast<ObjectData*>(od)->o_getUnchecked(name, od->o_getClassName());
+    if (!od->o_exists(name, od->o_getClassName())) {
       raise_warning("\"%s\" returned as member variable from "
                     "__sleep() but does not exist", name.data());
     }

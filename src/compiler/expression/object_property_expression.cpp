@@ -273,8 +273,15 @@ TypePtr ObjectPropertyExpression::inferTypes(AnalysisResultPtr ar,
   }
 
   TypePtr ret;
+  bool usesGet = false;
+  if (!cls->derivesFromRedeclaring()) {
+	if (cls->getAttribute(ClassScope::InheritsUnknownPropGetter) || 
+		cls->getAttribute(ClassScope::HasUnknownPropGetter)) {
+		usesGet = true;
+	}
+  }
   if (m_propSymValid && (!cls->derivesFromRedeclaring() ||
-                         m_propSym->isPrivate())) {
+                         m_propSym->isPrivate()) && !usesGet) {
     assert(m_symOwner);
     TypePtr t(m_propSym->getType());
     if (t && t->is(Type::KindOfVariant)) {
