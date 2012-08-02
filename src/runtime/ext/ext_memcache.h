@@ -33,6 +33,7 @@ bool f_memcache_cas(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, in
 bool f_memcache_replace(CObjRef memcache, CStrRef key, CVarRef var, int flag = 0, int expire = 0);
 Variant f_memcache_get(CObjRef memcache, CVarRef key, VRefParam flags = null);
 bool f_memcache_delete(CObjRef memcache, CStrRef key, int expire = 0);
+bool f_memcache_unlock(CObjRef memcache, CStrRef key);
 Variant f_memcache_increment(CObjRef memcache, CStrRef key, int offset = 1);
 Variant f_memcache_decrement(CObjRef memcache, CStrRef key, int offset = 1);
 bool f_memcache_close(CObjRef memcache);
@@ -90,6 +91,8 @@ class c_Memcache : public ExtObjectData, public Sweepable {
   DECLARE_METHOD_INVOKE_HELPERS(casbykey);
   public: bool t_delete(CStrRef key, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(delete);
+  public: bool t_unlock(CStrRef key);
+  DECLARE_METHOD_INVOKE_HELPERS(unlock);
   public: bool t_deletebykey(CStrRef key, CStrRef shardKey, int expire = 0);
   DECLARE_METHOD_INVOKE_HELPERS(deletebykey);
   public: Variant t_increment(CStrRef key, int offset = 1);

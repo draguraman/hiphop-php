@@ -507,6 +507,7 @@ StaticString s_sys_ssfb6412d4("): failed to open dir");
 StaticString s_sys_ssfbb3eb52("addUrl");
 StaticString s_sys_ssfc2d4779("getType");
 StaticString s_sys_ssfc63c2bb("ReflectionClass");
+StaticString s_sys_ssfc900e0e("unlock");
 StaticString s_sys_ssfcae4ca0(" ");
 StaticString s_sys_ssfdbe04fa("set");
 StaticString s_sys_ssfdbf8563("STRENGTH");

@@ -61,6 +61,11 @@ inline Variant x_memcache_get(CObjRef memcache, CVarRef key, VRefParam flags = n
   return f_memcache_get(memcache, key, flags);
 }
 
+inline bool x_memcache_unlock(CObjRef memcache, CStrRef key) {
+  FUNCTION_INJECTION_BUILTIN(memcache_unlock);
+  return f_memcache_unlock(memcache, key);
+}
+
 inline bool x_memcache_delete(CObjRef memcache, CStrRef key, int expire = 0) {
   FUNCTION_INJECTION_BUILTIN(memcache_delete);
   return f_memcache_delete(memcache, key, expire);

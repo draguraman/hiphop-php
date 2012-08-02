@@ -6810,6 +6810,15 @@ Variant ifa_mailparse_msg_get_part_data(void *extra, int count, INVOKE_FEW_ARGS_
 Variant i_mailparse_msg_get_part_data(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_mailparse_msg_get_part_data);
 }
+Variant ifa_memcache_unlock(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 2)) return throw_wrong_arguments("memcache_unlock", count, 2, 2, 1);
+  CVarRef arg0(a0);
+  CVarRef arg1(a1);
+  return (x_memcache_unlock(arg0, arg1));
+}
+Variant i_memcache_unlock(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_memcache_unlock);
+}
 Variant ifa_chroot(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 1)) return throw_wrong_arguments("chroot", count, 1, 1, 1);
   CVarRef arg0(a0);
@@ -17485,15 +17494,6 @@ Variant ifa_imap_mailboxmsginfo(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARG
 Variant i_imap_mailboxmsginfo(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_imap_mailboxmsginfo);
 }
-Variant ifa_xml_set_notation_decl_handler(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
-  if (UNLIKELY(count != 2)) return throw_wrong_arguments("xml_set_notation_decl_handler", count, 2, 2, 1);
-  CVarRef arg0(a0);
-  CVarRef arg1(a1);
-  return (x_xml_set_notation_decl_handler(arg0, arg1));
-}
-Variant i_xml_set_notation_decl_handler(void *extra, CArrRef params) {
-  return invoke_func_few_handler(extra, params, &ifa_xml_set_notation_decl_handler);
-}
 Variant ifa_dom_element_set_attribute_node_ns(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 2)) return throw_wrong_arguments("dom_element_set_attribute_node_ns", count, 2, 2, 1);
   CVarRef arg0(a0);
@@ -17502,6 +17502,15 @@ Variant ifa_dom_element_set_attribute_node_ns(void *extra, int count, INVOKE_FEW
 }
 Variant i_dom_element_set_attribute_node_ns(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_dom_element_set_attribute_node_ns);
+}
+Variant ifa_xml_set_notation_decl_handler(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 2)) return throw_wrong_arguments("xml_set_notation_decl_handler", count, 2, 2, 1);
+  CVarRef arg0(a0);
+  CVarRef arg1(a1);
+  return (x_xml_set_notation_decl_handler(arg0, arg1));
+}
+Variant i_xml_set_notation_decl_handler(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_xml_set_notation_decl_handler);
 }
 Variant ifa_mysql_next_result(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count > 1)) return throw_toomany_arguments("mysql_next_result", 1, 1);
@@ -22089,6 +22098,7 @@ CallInfo ci_magicksetimagecompose((void*)&i_magicksetimagecompose, (void*)&ifa_m
 CallInfo ci_chdir((void*)&i_chdir, (void*)&ifa_chdir, 1, 0, 0x0000000000000000LL);
 CallInfo ci_magickgetexception((void*)&i_magickgetexception, (void*)&ifa_magickgetexception, 1, 0, 0x0000000000000000LL);
 CallInfo ci_mailparse_msg_get_part_data((void*)&i_mailparse_msg_get_part_data, (void*)&ifa_mailparse_msg_get_part_data, 1, 0, 0x0000000000000000LL);
+CallInfo ci_memcache_unlock((void*)&i_memcache_unlock, (void*)&ifa_memcache_unlock, 2, 0, 0x0000000000000000LL);
 CallInfo ci_chroot((void*)&i_chroot, (void*)&ifa_chroot, 1, 0, 0x0000000000000000LL);
 CallInfo ci_exif_tagname((void*)&i_exif_tagname, (void*)&ifa_exif_tagname, 1, 0, 0x0000000000000000LL);
 CallInfo ci_crypt((void*)&i_crypt, (void*)&ifa_crypt, 2, 0, 0x0000000000000000LL);
@@ -23156,8 +23166,8 @@ CallInfo ci_hphp_invoke((void*)&i_hphp_invoke, (void*)&ifa_hphp_invoke, 2, 0, 0x
 CallInfo ci_imagecopymerge((void*)&i_imagecopymerge, (void*)&ifa_imagecopymerge, 9, 0, 0x0000000000000000LL);
 CallInfo ci_register_shutdown_function((void*)&i_register_shutdown_function, (void*)&ifa_register_shutdown_function, 1, 1, 0x0000000000000000LL);
 CallInfo ci_imap_mailboxmsginfo((void*)&i_imap_mailboxmsginfo, (void*)&ifa_imap_mailboxmsginfo, 1, 0, 0x0000000000000000LL);
-CallInfo ci_xml_set_notation_decl_handler((void*)&i_xml_set_notation_decl_handler, (void*)&ifa_xml_set_notation_decl_handler, 2, 0, 0x0000000000000000LL);
 CallInfo ci_dom_element_set_attribute_node_ns((void*)&i_dom_element_set_attribute_node_ns, (void*)&ifa_dom_element_set_attribute_node_ns, 2, 0, 0x0000000000000000LL);
+CallInfo ci_xml_set_notation_decl_handler((void*)&i_xml_set_notation_decl_handler, (void*)&ifa_xml_set_notation_decl_handler, 2, 0, 0x0000000000000000LL);
 CallInfo ci_mysql_next_result((void*)&i_mysql_next_result, (void*)&ifa_mysql_next_result, 1, 0, 0x0000000000000000LL);
 CallInfo ci_magickgetversion((void*)&i_magickgetversion, (void*)&ifa_magickgetversion, 0, 0, 0x0000000000000000LL);
 CallInfo ci_dom_document_create_element_ns((void*)&i_dom_document_create_element_ns, (void*)&ifa_dom_document_create_element_ns, 4, 0, 0x0000000000000000LL);
@@ -32119,6 +32129,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 5531:
       HASH_GUARD(0x37D003B09D0C759BLL, stream_get_contents) {
         ci = &ci_stream_get_contents;
+        return true;
+      }
+      break;
+    case 5535:
+      HASH_GUARD(0x4ABF4D4DF709959FLL, memcache_unlock) {
+        ci = &ci_memcache_unlock;
         return true;
       }
       break;
