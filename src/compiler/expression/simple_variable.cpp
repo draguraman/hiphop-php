@@ -263,6 +263,12 @@ TypePtr SimpleVariable::inferAndCheck(AnalysisResultPtr ar, TypePtr type,
     } else if (scope->is(BlockScope::ClassScope)) {
       ASSERT(getClassScope().get() == scope.get());
       // ClassVariable expression will come to this block of code
+      ClassScopePtr cls = getClassScope();
+      if (cls->getAttribute(ClassScope::InheritsUnknownPropGetter) ||
+        cls->getAttribute(ClassScope::HasUnknownPropGetter)) {
+        type = Type::Variant;
+      }
+
       ret = getClassScope()->checkProperty(getScope(), m_sym, type, true, ar);
     } else {
       TypePtr tmpType = type;
