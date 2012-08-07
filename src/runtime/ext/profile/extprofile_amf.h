@@ -1,3 +1,19 @@
+/*
+   +----------------------------------------------------------------------+
+   | HipHop for PHP                                                       |
+   +----------------------------------------------------------------------+
+   | Copyright (c) 2010- Facebook, Inc. (http://www.facebook.com)         |
+   | Copyright (c) 1997-2010 The PHP Group                                |
+   +----------------------------------------------------------------------+
+   | This source file is subject to version 3.01 of the PHP license,      |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+   | http://www.php.net/license/3_01.txt                                  |
+   | If you did not receive a copy of the PHP license and are unable to   |
+   | obtain it through the world-wide-web, please send a note to          |
+   | license@php.net so we can mail you a copy immediately.               |
+   +----------------------------------------------------------------------+
+*/
 
 #ifndef __EXTPROFILE_AMF_H__
 #define __EXTPROFILE_AMF_H__
@@ -9,16 +25,16 @@
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
 
-inline String x_amf_encode(VRefParam var, VRefParam flag = null, VRefParam callback = null, VRefParam output = null) {
+inline String x_amf_encode(CVarRef var, CVarRef flag = null, CVarRef callback = null, CVarRef output = null) {
   FUNCTION_INJECTION_BUILTIN(amf_encode);
   TAINT_OBSERVER(TAINT_BIT_NONE, TAINT_BIT_NONE);
   return f_amf_encode(var, flag, callback, output);
 }
 
-inline Variant x_amf_decode(CStrRef var, VRefParam flag = null, VRefParam offset = null) {
+inline Variant x_amf_decode(CStrRef var, CVarRef flag = null, CVarRef offset = null, CVarRef callback = null) {
   FUNCTION_INJECTION_BUILTIN(amf_decode);
   TAINT_OBSERVER(TAINT_BIT_NONE, TAINT_BIT_NONE);
-  return f_amf_decode(var, flag, offset);
+  return f_amf_decode(var, flag, offset, callback);
 }
 
 

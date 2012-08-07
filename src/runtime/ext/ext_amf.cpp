@@ -15,11 +15,11 @@
    +----------------------------------------------------------------------+
 */
 
+#include <runtime/ext/ext_amf.h>
 #include <util/logger.h>
 
 #include <system/lib/systemlib.h>
 
-#include <runtime/ext/ext_amf.h>
 
 #include <iostream>
 #include <string>

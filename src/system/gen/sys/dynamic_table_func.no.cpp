@@ -11072,6 +11072,20 @@ Variant i_call_user_func_rpc(void *extra, CArrRef params) {
     return (x_call_user_func_rpc(count, arg0, arg1, arg2, arg3, arg4, p));
   }
 }
+Variant ifa_amf_decode(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count < 1 || count > 4)) return throw_wrong_arguments("amf_decode", count, 1, 4, 1);
+  CVarRef arg0(a0);
+  if (count <= 1) return (x_amf_decode(arg0));
+  CVarRef arg1(a1);
+  if (count <= 2) return (x_amf_decode(arg0, arg1));
+  CVarRef arg2(a2);
+  if (count <= 3) return (x_amf_decode(arg0, arg1, arg2));
+  CVarRef arg3(a3);
+  return (x_amf_decode(arg0, arg1, arg2, arg3));
+}
+Variant i_amf_decode(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_amf_decode);
+}
 Variant ifa_dom_document_save(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count < 2 || count > 3)) return throw_wrong_arguments("dom_document_save", count, 2, 3, 1);
   CVarRef arg0(a0);
@@ -15032,6 +15046,20 @@ Variant ifa_openssl_x509_checkpurpose(void *extra, int count, INVOKE_FEW_ARGS_IM
 Variant i_openssl_x509_checkpurpose(void *extra, CArrRef params) {
   return invoke_func_few_handler(extra, params, &ifa_openssl_x509_checkpurpose);
 }
+Variant ifa_amf_encode(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count < 1 || count > 4)) return throw_wrong_arguments("amf_encode", count, 1, 4, 1);
+  CVarRef arg0(a0);
+  if (count <= 1) return (x_amf_encode(arg0));
+  CVarRef arg1(a1);
+  if (count <= 2) return (x_amf_encode(arg0, arg1));
+  CVarRef arg2(a2);
+  if (count <= 3) return (x_amf_encode(arg0, arg1, arg2));
+  CVarRef arg3(a3);
+  return (x_amf_encode(arg0, arg1, arg2, arg3));
+}
+Variant i_amf_encode(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_amf_encode);
+}
 Variant ifa_php_uname(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count > 1)) return throw_toomany_arguments("php_uname", 1, 1);
   if (count <= 0) return (x_php_uname());
@@ -17464,6 +17492,14 @@ Variant i_imagecopymerge(void *extra, CArrRef params) {
     return (x_imagecopymerge(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
   }
 }
+Variant ifa_imap_mailboxmsginfo(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
+  if (UNLIKELY(count != 1)) return throw_wrong_arguments("imap_mailboxmsginfo", count, 1, 1, 1);
+  CVarRef arg0(a0);
+  return (x_imap_mailboxmsginfo(arg0));
+}
+Variant i_imap_mailboxmsginfo(void *extra, CArrRef params) {
+  return invoke_func_few_handler(extra, params, &ifa_imap_mailboxmsginfo);
+}
 Variant ifa_register_shutdown_function(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count < 1)) return throw_missing_arguments("register_shutdown_function", count+1, 1);
   CVarRef arg0(a0);
@@ -17485,14 +17521,6 @@ Variant i_register_shutdown_function(void *extra, CArrRef params) {
     const Array &p(count > 1 ? params.slice(1, count - 1, false) : Array());
     return (x_register_shutdown_function(count, arg0, p), null);
   }
-}
-Variant ifa_imap_mailboxmsginfo(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
-  if (UNLIKELY(count != 1)) return throw_wrong_arguments("imap_mailboxmsginfo", count, 1, 1, 1);
-  CVarRef arg0(a0);
-  return (x_imap_mailboxmsginfo(arg0));
-}
-Variant i_imap_mailboxmsginfo(void *extra, CArrRef params) {
-  return invoke_func_few_handler(extra, params, &ifa_imap_mailboxmsginfo);
 }
 Variant ifa_dom_element_set_attribute_node_ns(void *extra, int count, INVOKE_FEW_ARGS_IMPL_ARGS) {
   if (UNLIKELY(count != 2)) return throw_wrong_arguments("dom_element_set_attribute_node_ns", count, 2, 2, 1);
@@ -22522,6 +22550,7 @@ CallInfo ci_imap_fetchbody((void*)&i_imap_fetchbody, (void*)&ifa_imap_fetchbody,
 CallInfo ci_drawskewx((void*)&i_drawskewx, (void*)&ifa_drawskewx, 2, 0, 0x0000000000000000LL);
 CallInfo ci_date_format((void*)&i_date_format, (void*)&ifa_date_format, 2, 0, 0x0000000000000000LL);
 CallInfo ci_call_user_func_rpc((void*)&i_call_user_func_rpc, (void*)&ifa_call_user_func_rpc, 5, 32, 0x0000000000000000LL);
+CallInfo ci_amf_decode((void*)&i_amf_decode, (void*)&ifa_amf_decode, 4, 0, 0x0000000000000000LL);
 CallInfo ci_dom_document_save((void*)&i_dom_document_save, (void*)&ifa_dom_document_save, 3, 0, 0x0000000000000000LL);
 CallInfo ci_mcrypt_generic_deinit((void*)&i_mcrypt_generic_deinit, (void*)&ifa_mcrypt_generic_deinit, 1, 0, 0x0000000000000000LL);
 CallInfo ci_socket_last_error((void*)&i_socket_last_error, (void*)&ifa_socket_last_error, 1, 0, 0x0000000000000000LL);
@@ -22926,6 +22955,7 @@ CallInfo ci_dom_characterdata_substring_data((void*)&i_dom_characterdata_substri
 CallInfo ci_mcrypt_module_open((void*)&i_mcrypt_module_open, (void*)&ifa_mcrypt_module_open, 4, 0, 0x0000000000000000LL);
 CallInfo ci_pow((void*)&i_pow, (void*)&ifa_pow, 2, 0, 0x0000000000000000LL);
 CallInfo ci_openssl_x509_checkpurpose((void*)&i_openssl_x509_checkpurpose, (void*)&ifa_openssl_x509_checkpurpose, 4, 0, 0x0000000000000000LL);
+CallInfo ci_amf_encode((void*)&i_amf_encode, (void*)&ifa_amf_encode, 4, 0, 0x0000000000000000LL);
 CallInfo ci_php_uname((void*)&i_php_uname, (void*)&ifa_php_uname, 1, 0, 0x0000000000000000LL);
 CallInfo ci_header((void*)&i_header, (void*)&ifa_header, 3, 0, 0x0000000000000000LL);
 CallInfo ci_socket_bind((void*)&i_socket_bind, (void*)&ifa_socket_bind, 3, 0, 0x0000000000000000LL);
@@ -23164,8 +23194,8 @@ CallInfo ci_preg_last_error((void*)&i_preg_last_error, (void*)&ifa_preg_last_err
 CallInfo ci_dns_get_mx((void*)&i_dns_get_mx, (void*)&ifa_dns_get_mx, 3, 0, 0x0000000000000006LL);
 CallInfo ci_hphp_invoke((void*)&i_hphp_invoke, (void*)&ifa_hphp_invoke, 2, 0, 0x0000000000000000LL);
 CallInfo ci_imagecopymerge((void*)&i_imagecopymerge, (void*)&ifa_imagecopymerge, 9, 0, 0x0000000000000000LL);
-CallInfo ci_register_shutdown_function((void*)&i_register_shutdown_function, (void*)&ifa_register_shutdown_function, 1, 1, 0x0000000000000000LL);
 CallInfo ci_imap_mailboxmsginfo((void*)&i_imap_mailboxmsginfo, (void*)&ifa_imap_mailboxmsginfo, 1, 0, 0x0000000000000000LL);
+CallInfo ci_register_shutdown_function((void*)&i_register_shutdown_function, (void*)&ifa_register_shutdown_function, 1, 1, 0x0000000000000000LL);
 CallInfo ci_dom_element_set_attribute_node_ns((void*)&i_dom_element_set_attribute_node_ns, (void*)&ifa_dom_element_set_attribute_node_ns, 2, 0, 0x0000000000000000LL);
 CallInfo ci_xml_set_notation_decl_handler((void*)&i_xml_set_notation_decl_handler, (void*)&ifa_xml_set_notation_decl_handler, 2, 0, 0x0000000000000000LL);
 CallInfo ci_mysql_next_result((void*)&i_mysql_next_result, (void*)&ifa_mysql_next_result, 1, 0, 0x0000000000000000LL);
@@ -28968,6 +28998,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
         return true;
       }
       break;
+    case 3593:
+      HASH_GUARD(0x152D5FD58DFC4E09LL, amf_encode) {
+        ci = &ci_amf_encode;
+        return true;
+      }
+      break;
     case 3596:
       HASH_GUARD(0x3AD6E084483B2E0CLL, array_udiff_assoc) {
         ci = &ci_array_udiff_assoc;
@@ -33387,6 +33423,12 @@ bool get_call_info_builtin(const CallInfo *&ci, void *&extra, const char *s, int
     case 6462:
       HASH_GUARD(0x3946D67A0D16D93ELL, hphp_splfileinfo_isreadable) {
         ci = &ci_hphp_splfileinfo_isreadable;
+        return true;
+      }
+      break;
+    case 6467:
+      HASH_GUARD(0x4D9A4C0ABF48F943LL, amf_decode) {
+        ci = &ci_amf_decode;
         return true;
       }
       break;
