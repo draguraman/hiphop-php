@@ -29,7 +29,7 @@ using namespace std;
 
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
-
+IMPLEMENT_DEFAULT_EXTENSION(amf);
 
 #ifdef SUCCESS
 #undef SUCCESS
@@ -1587,7 +1587,7 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                         Variant htRows;
                         Variant htColumns;
                         int nColumns,nRows,iRow;
-                        int iClassDef;
+                        int iClassDef = 0; //keeping compiler happy
 
                         if (variant_hash_find(myht, (char*)"rows", rows) == SUCCESS &&
                                         variant_hash_find(myht, (char*)"columns", columns) == SUCCESS &&

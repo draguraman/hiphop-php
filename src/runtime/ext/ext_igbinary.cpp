@@ -28,6 +28,7 @@
 
 namespace HPHP {
 ///////////////////////////////////////////////////////////////////////////////
+IMPLEMENT_DEFAULT_EXTENSION(igbinary);
 
 String f_igbinary_serialize(CVarRef var) {
   IGBinarySerializer igs;
