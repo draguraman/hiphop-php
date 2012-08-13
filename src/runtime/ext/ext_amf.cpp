@@ -215,24 +215,24 @@ static int decode2raw (const char * hexData, const unsigned int hexDataLen,
 
 /**  AMF0 types */
 enum AMF0Codes { 
-	AMF0_NUMBER, 
-	AMF0_BOOLEAN, 
-	AMF0_STRING, 
-	AMF0_OBJECT, 
-	AMF0_MOVIECLIP, 
-	AMF0_NULL, 
-	AMF0_UNDEFINED,
-	AMF0_REFERENCE,
-	AMF0_MIXEDARRAY,
-	AMF0_ENDOBJECT,
-	AMF0_ARRAY, 
-	AMF0_DATE, 
-	AMF0_LONGSTRING, 
-	AMF0_UNSUPPORTED,
-	AMF0_RECORDSET,
-	AMF0_XML,
-	AMF0_TYPEDOBJECT,
-	AMF0_AMF3
+	AMF0_NUMBER, 		//0 
+	AMF0_BOOLEAN, 		//1
+	AMF0_STRING, 		//2
+	AMF0_OBJECT, 		//3
+	AMF0_MOVIECLIP, 	//4
+	AMF0_NULL, 		//5
+	AMF0_UNDEFINED,		//6
+	AMF0_REFERENCE,		//7
+	AMF0_MIXEDARRAY,	//8
+	AMF0_ENDOBJECT,		//9
+	AMF0_ARRAY, 		//a
+	AMF0_DATE, 		//b
+	AMF0_LONGSTRING, 	//c
+	AMF0_UNSUPPORTED,	//d
+	AMF0_RECORDSET,		//e
+	AMF0_XML,		//f
+	AMF0_TYPEDOBJECT,	//10
+	AMF0_AMF3		//11
 };
 
 /**  AMF3 types */
@@ -758,10 +758,16 @@ static int util_array_num_elements(const Variant & var) {
  *  \return FAILURE if existent
  *  code taken from serializer
 */
-static int amf_cache_zval(HashTable *var_hash, const Variant& var, ulong * old, int * nextIndex, int action)
+static int amf_cache_zval(HashTable *var_hash, const Variant& var, ulong * old, int * nextIndex, int action, void *suggestedindex = NULL)
 {
                 ulong old_idx;
-                ulong idx = var.isObject()?(ulong)var.toObject().objectForCall():var.isArray()?(ulong)var.toArray().getArrayData():(ulong)var.getVariantData();
+                //ulong idx = var.isObject()?(ulong)var.toObject().objectForCall():var.isArray()?(ulong)var.toArray().getArrayData():(ulong)var.getVariantData();
+		ulong idx = 0;
+		if (suggestedindex) {
+			idx = (ulong)suggestedindex;
+		} else {
+			idx = (ulong) var.asDataPtr();
+		}
 
                 if((action & 1) == 0)
                 {
@@ -799,7 +805,7 @@ static int amf_cache_zval_typed(amf_serialize_data_t*var_hash, const Variant& va
         }
 }
 /*  Encode {{{1*/
-static void amf0_serialize_var(amf_serialize_output buf, const Variant&struc, amf_serialize_data_t*var_hash );
+static void amf0_serialize_var(amf_serialize_output buf, const Variant&struc, amf_serialize_data_t*var_hash, void * suggestedIndex = NULL);
 static void amf3_serialize_var(amf_serialize_output buf, const Variant&struc, amf_serialize_data_t *var_hash );
 static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, amf_serialize_data_t *var_hash );
 static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, amf_serialize_data_t* var_hash );
@@ -1260,12 +1266,14 @@ static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc,
    utfname data
    w(0) b(9)
 */
-static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&myht, int isArray, amf_serialize_data_t*var_hash )
+static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z, int isArray, amf_serialize_data_t*var_hash )
 {
+	  Array odata = Array::Create();
+	  CArrRef h = isArray ? z.toCArrRef() : (z.getObjectData()->o_toArray_withInfo(&odata)); 
 
-        for (ArrayIter iter = myht.begin(); iter; ++iter) {
+        for (ArrayIter iter(h); iter; ++iter) {
                 Variant key(iter.first());
-		CVarRef var(iter.secondRef());
+		CVarRef val(iter.secondRef());
 
                 if(key.isInteger())
                 {
@@ -1293,9 +1301,48 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&my
                 //        amf_write_byte(buf, AMF0_UNDEFINED);
                 //}
                 //else
-                {
-                        amf0_serialize_var(buf, (Variant&)var, var_hash );
-                }
+		void *objIndex = NULL;
+		if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+			Variant *p = NULL;
+			Variant tmp;
+			//get the real property name for private members
+			String realKey = key.toString().lastToken((char)0);
+			DataType retType;
+			if (z.getType() == KindOfObject) {
+			Variant typeinfo,offsetinfo;
+			if (odata.exists(realKey)) {
+				Array typedata = odata[realKey];
+				typeinfo = typedata["type"];
+				offsetinfo = typedata["offset"];
+			} else {
+				// this is a dynamic member
+				typeinfo = (int)KindOfVariant;
+				offsetinfo = 0;
+			}
+			if (typeinfo.toInt64() == (int)KindOfVariant) { 
+			p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,z.getObjectData()->o_getClassName());
+			} else {
+			objIndex = (char *)(z.getObjectData()) + offsetinfo.toInt64();
+			}
+			} else if (z.getType() == KindOfArray) {
+				if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
+				   p = z.toArray().lvalPtr(key.toCStrRef(),false,false);	
+				} else {
+				   p = z.toArray().lvalPtr(key.asInt64Val(),false, false);	
+				}
+			} else  {
+				raise_error("Invalid type of object seen in serialize array");
+			}
+			if (p) {
+                            amf0_serialize_var(buf, (Variant&)(*p), var_hash );
+			} else if (objIndex) {
+                            amf0_serialize_var(buf, (Variant&)val, var_hash, objIndex);
+			} else {
+				raise_error("Failure in serialize");
+			}
+		} else {
+                        amf0_serialize_var(buf, (Variant&)val, var_hash );
+	        }
         }
         amf0_write_endofobject(buf );
 }
@@ -2133,7 +2180,7 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
         }
 }
 
-static void amf0_serialize_var(amf_serialize_output buf, const Variant & struc, amf_serialize_data_t *var_hash )
+static void amf0_serialize_var(amf_serialize_output buf, const Variant & struc, amf_serialize_data_t *var_hash , void *suggestIndex)
 {
         ulong objectIndex;
 
@@ -2161,7 +2208,7 @@ static void amf0_serialize_var(amf_serialize_output buf, const Variant & struc, 
                         amf0_serialize_object(buf,struc,var_hash );
                         return;
                 case KindOfArray:
-                        if(amf_cache_zval(&(var_hash->objects0), struc, &objectIndex,&(var_hash->nextObject0Index),0) == FAILURE)
+                        if(amf_cache_zval(&(var_hash->objects0), struc, &objectIndex,&(var_hash->nextObject0Index),0, suggestIndex) == FAILURE)
                         {
                                 amf_write_byte(buf, AMF0_REFERENCE);
                                 amf0_write_short(buf, objectIndex );
