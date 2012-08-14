@@ -44,6 +44,9 @@ IMPLEMENT_DEFAULT_EXTENSION(amf);
 static int printstrings (const char * buf, const int bufLen);
 
 
+#define amf_error_docref php_error_docref
+#define amf_error_docref1 php_error_docref
+
 
 #define RETURN_FALSE_ { amf_error_docref(NULL , E_WARNING, "Error ---->");amf_error_docflush();RETURN_FALSE } while(0);
 #define RETURN_TRUE_ if (0) {amf_error_docref(NULL , E_WARNING, "No Issues ---->");amf_error_docflush();}
@@ -57,7 +60,13 @@ static  long max_alloc_size = 10485760;
 /********* Debugging Info ****************/
 static int amf_bailout();
 static void printData (char * p, int len);
-static void php_error_docref(const char *docref, int type, const char *format, ...) {
+#define php_error_docref(a,b,...) {  \
+if (E_WARNING == b) {                \
+	Logger::Warning(__VA_ARGS__);\
+} else {                             \
+	Logger::Error(__VA_ARGS__);  \
+} }                                
+/*static void php_error_docref(const char *docref, int type, const char *format, ...) {
      va_list args;
 
      va_start(args, format);
@@ -72,8 +81,8 @@ static void php_error_docref(const char *docref, int type, const char *format, .
 		break;
      }
      va_end(args);
-}
-static void amf_error_docref(const char *docref, int type, const char *format, ...)
+}*/
+/*static void amf_error_docref(const char *docref, int type, const char *format, ...)
 {
         php_error_docref(docref, type, format);
 }
@@ -81,7 +90,7 @@ static void amf_error_docref(const char *docref, int type, const char *format, .
 static void amf_error_docref1(const char *docref , int type, const char *format, ...)
 {
         php_error_docref(docref, type, format);
-}
+}*/
 
 static int encode2hex (const char * data, const unsigned int dataLen,
                  char *hexData, unsigned int *hexDataLen)
@@ -643,13 +652,14 @@ static int util_hash_next_index_put(HashTable *ht, Variant& pData) {
         return SUCCESS;
 }
 
-
 static int util_hash_index_find(HashTable *ht, ulong h, Variant & pData) {
-        std::string k = ""+h;
+	std::ostringstream ss;
+ 	ss<<h;
+        string k = ss.str();
         HashTable::iterator res = ht->find(k);
         if ( res != ht->end())
         {
-                pData = res->second;
+                pData = *(res->second);
                 return SUCCESS;
         }
         
@@ -664,7 +674,7 @@ static int util_hash_index_find(HashTable *ht, ulong h, ulong* idx) {
         HashTable::iterator res = ht->find(k);
         if ( res != ht->end())
         {
-                *idx = (ulong)res->second;
+                *idx = (ulong)(res->second);
                 return SUCCESS;
         }
 
@@ -677,7 +687,7 @@ static int util_hash_index_find(HashTable *ht, char* h, ulong* idx) {
         HashTable::iterator res = ht->find(k);
         if ( res != ht->end())
         {
-		*idx = (ulong)res->second;
+		*idx = (ulong)(res->second);
                 return SUCCESS;
         }
 	
@@ -690,7 +700,7 @@ static int util_hash_index_find(HashTable *ht, char* h, Variant& pData) {
         HashTable::iterator res = ht->find(k);
         if ( res != ht->end())
         {
-		pData = res->second;
+		pData = *res->second;
                 return SUCCESS;
         }
 	
@@ -2759,7 +2769,7 @@ static int amf3_read_string(Variant& rval, const unsigned char **p, const unsign
 
         if(len == 1)
         {
-                rval = &var_hash->zEmpty_string;
+                rval = var_hash->zEmpty_string;
         }
         else if((len & AMF_INLINE_ENTITY) != 0)
         {
@@ -2775,17 +2785,16 @@ static int amf3_read_string(Variant& rval, const unsigned char **p, const unsign
 			String str= String((char*)src, len , CopyString);
                         newval = str;
                 }
-
+                rval = newval;
                 if(storeReference == 1)
                 {
-                        util_hash_index_put(&(var_hash->strings), util_hash_num_elements(&(var_hash->strings)),newval);  /*  pass referenc */
+                        util_hash_next_index_put(&(var_hash->strings),rval);  /*  pass referenc */
                 }
                 else
                 {
 			//TODO check
                         //newval->refcount--;
                 }
-                rval = newval;
         }
         else
         {
@@ -3040,7 +3049,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
 
                         while(1)
                         {
-                                Variant zKey,  zValue;
+                                Variant &zKey=*(NEW(Variant)()),  &zValue=*(NEW(Variant)());
                                 char * pEndOfString;
                                 char tmp[32];
                                 unsigned int keyLength;
@@ -3090,7 +3099,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 }
                                 else
                                 {
-                                        Variant zValue;
+                                        Variant &zValue=*(NEW(Variant)());
                                         if(amf3_unserialize_var(zValue,p,max,var_hash ) == FAILURE)
                                         {
                                                 amf_error_docref(NULL , E_WARNING, "amf cannot unserialize array item %d", iIndex);
@@ -3120,7 +3129,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                         int bTypedObject;
                         int iDynamicObject;
                         int iExternalizable;
-                        Variant  zClassDef,zClassname = null_variant;
+                        Variant  &zClassDef=*(NEW(Variant)()),&zClassname =*(NEW(Variant)(null_variant));
                         int iMember;
                         int bIsArray = 0;
                         int iSuccess = FAILURE;
@@ -3160,11 +3169,9 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 iExternalizable = handle & AMF_CLASS_EXTERNAL;
                                 iDynamicObject = handle & AMF_CLASS_DYNAMIC;
                                 nClassMemberCount = handle >> AMF_CLASS_MEMBERCOUNT_SHIFT;
-
                                 if (amf3_read_string(zClassname,p,max,1,AMF_STRING_AS_TEXT,var_hash ) == FAILURE) return FAILURE;
 
                                 bTypedObject = zClassname.toString().length() > 0;
-
                                  /*  a classdef is an array with named keys for special informatio */
                                  /*  and then a indexed values for the member */
                                 zClassDef = Variant();
@@ -3175,7 +3182,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                  /*  loop over classMemberCoun */
                                 for(iMember = 0; iMember < nClassMemberCount; iMember++)
                                 {
-                                        Variant zMemberName;
+                                        Variant &zMemberName = *(NEW(Variant)());
                                         if(amf3_read_string(zMemberName,p,max,1,AMF_STRING_AS_TEXT,var_hash ) == FAILURE)
                                         {
                                                 break;
@@ -3241,7 +3248,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 				obj = create_object(zClassname.toString().data(), Array::Create(), false);
                                 				rval = obj;
                         				} catch (ClassNotFoundException &e) {
-                                				amf_error_docref(NULL , E_WARNING, "amf cannot find class %s\n",zClassname.toString().data());
+                                				amf_error_docref(NULL , E_WARNING, "%s:amf cannot find class %s\n",__FUNCTION__,zClassname.toString().data());
                                 				rval = Object(SystemLib::AllocStdClassObject());
                         				}
 
@@ -3257,7 +3264,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 amf_put_in_cache(&(var_hash->objects),rval);
                                 for(iMember = 0; iMember < nClassMemberCount;iMember++)
                                 {
-                                        Variant pzName , zValue;
+                                        Variant &pzName=*(NEW(Variant)()), &zValue=*(NEW(Variant)());
                                         pzName =  null_variant;
                                         zValue = null_variant;
                                         if(hash_index_find(zClassDef,iMember+2,pzName) == FAILURE)
@@ -3285,8 +3292,8 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 {
                                         while(1)
                                         {
-                                                Variant zKey = null_variant;
-                                                Variant zValue = null_variant;
+                                                Variant &zKey = *(NEW(Variant)(null_variant));
+                                                Variant &zValue = *(NEW(Variant)(null_variant));
                                                 if(amf3_read_string(zKey,p,max,1,AMF_STRING_AS_TEXT,var_hash ) == FAILURE)
                                                 {
                                                         amf_error_docref(NULL , E_WARNING, "amf cannot understand key name %X","");
