@@ -459,13 +459,14 @@ typedef amf_serialize_output_t *amf_serialize_output;
 static int amf_array_init(Variant&arg, int count )
 {
 	Array arr = Array::Create();
-	arg = arr.getArrayData();
+	//arg = arr.getArrayData();
+	arg = arr;
         return SUCCESS;
 }
 static int add_index_zval(Variant& rval,int iIndex,const Variant& zValue)
 {
 	Array arr = rval.toArray();
-	arr.add(iIndex, zValue);
+	arr.set(iIndex, zValue);
 	rval = arr;
         return SUCCESS;
 }
@@ -2512,7 +2513,6 @@ PRINT("print_hex_string");
 static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const unsigned char *max, amf_unserialize_data_t *var_hash );
 static int amf_var_unserialize(Variant& rval, const unsigned char **p, const unsigned char *max, amf_unserialize_data_t *var_hash );
 
-
 static int amf_perform_unserialize_callback(int ievent, const Variant& arg0,Variant& zResultValue, int shared, amf_serialize_data_t * var_hash )
 {
         if(var_hash->callbackFx != null_variant)
@@ -2579,6 +2579,17 @@ static int amf_put_in_cache(HashTable * var_hash, Variant & var)
 	return util_hash_next_index_put(var_hash, var);
 }
 
+/*void dump_cache(HashTable *var_hash, char* prompt) {
+	HashTable::const_iterator iter = var_hash->begin();
+	std::cout<<"====Dump:"<<prompt<<"====\n";
+	while(iter != var_hash->end()) {
+		std::cout<<"Entry:"<<iter->first<<"\n";
+		std::cout<<"Type:"<<iter->second->getType()<<"\n";
+		iter->second->dump();
+		std::cout<<"\n";
+		iter++;
+	}
+}*/
 /**  reads an integer in AMF0 format */
 static int amf_read_int(const unsigned char **p, const unsigned char *max, amf_unserialize_data_t *var_hash, int * num)
 {
@@ -2879,8 +2890,9 @@ static int amf_read_objectdata(Variant& rval, const unsigned char **p, const uns
         amf_put_in_cache(&(var_hash->objects0),rval);
         while(1)
         {
-                Variant zName;
-                Variant  zValue = Object(SystemLib::AllocStdClassObject());
+                Variant &zName = *(NEW(Variant)());
+                Variant &zValue = *(NEW(Variant)());
+                //zValue = Object(SystemLib::AllocStdClassObject());
                 if(amf0_read_string(zName,p,max,2,AMF_STRING_AS_TEXT,var_hash ) == FAILURE)
                 {
                         amf_error_docref(NULL , E_WARNING, "amf cannot read string in array/object");
@@ -2920,7 +2932,7 @@ static int amf_read_objectdata(Variant& rval, const unsigned char **p, const uns
                          /*  TODO test for key as 0 and key as " */
                         if(iIndex != 0 && (pEndOfString == NULL || *pEndOfString == 0))
                         {
-                                hash_index_update(htOutput, iIndex, zValue);  /*  pas */
+                                hash_index_update(rval, iIndex, zValue);  /*  pas */
                         }
                         else
                         {
@@ -3358,6 +3370,8 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
 /**  generic unserialization in AMF0 format */
 static int amf_var_unserialize(Variant& rval, const unsigned char **p, const unsigned char *max, amf_unserialize_data_t *var_hash )
 {
+	//dump_cache(&(var_hash->objects0),"objects0");
+	//dump_cache(&(var_hash->objects),"objects");
 PRINT("amf_var_unserialize");
         if (!p || !max)
         {
@@ -3383,9 +3397,16 @@ PRINT("amf_var_unserialize double");
         case AMF0_ENDOBJECT:
                 return FAILURE;
         case AMF0_BOOLEAN:
+		{
 PRINT("amf_var_unserialize boolean");
-                rval= *cursor++;
+                int bval = *cursor++;
+		if (bval) {
+			rval = true;
+		} else {
+			rval = false;
+		}
                 *p = cursor;
+		}
                 break;
         case AMF0_DATE:
                  /*  date: double in */
@@ -3441,7 +3462,7 @@ PRINT("amf_var_unserialize amf0 array");
                         if (amf_read_int(p,max,var_hash, &length) == FAILURE) return FAILURE;
                         amf_array_init(rval,length );
 
-                        Variant ht = rval;
+                        //Variant ht = rval;
                          /* zval_add_ref(rval) */
                         amf_put_in_cache(&(var_hash->objects0),rval);
 
@@ -3454,7 +3475,7 @@ PRINT("amf_var_unserialize amf0 array");
                                 }
                                 else
                                 {
-                                        Variant zValue;
+                                        Variant& zValue=*(NEW(Variant)());
                                         if(amf_var_unserialize(zValue,p,max, var_hash ) == FAILURE)
                                         {
                                                 amf_error_docref(NULL , E_WARNING, "amf bad unserialized value for array index %d",iIndex);
@@ -3642,7 +3663,7 @@ Variant f_amf_decode(CStrRef var, CVarRef flag /* = null */, CVarRef offsetParam
 
                 unsigned char *p = (unsigned char*)var.data()+offset;
 
-                Variant  tmp=false;
+                Variant&  tmp=*(NEW(Variant)());
 
 
                 AMF_UNSERIALIZE_CTOR(var_hash,(Variant&)callback)
