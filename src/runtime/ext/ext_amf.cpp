@@ -1100,7 +1100,7 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 			} else if (objIndex) {
                             amf3_serialize_var(buf, (Variant&)val, var_hash, objIndex);
 			} else {
-				raise_error("Failure in serialize");
+				Logger::Error("Failure in serialize");
 			}
 		} else {
                         amf3_serialize_var(buf, (Variant&)val, var_hash );
@@ -1412,7 +1412,7 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 			} else if (objIndex) {
                             amf0_serialize_var(buf, (Variant&)val, var_hash, objIndex);
 			} else {
-				raise_error("Failure in serialize");
+				Logger::Error("Failure in serialize");
 			}
 		} else {
                         amf0_serialize_var(buf, (Variant&)val, var_hash );
@@ -1928,7 +1928,7 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 						} else if (objIndex) {
 						    amf3_serialize_var(buf, (Variant&)val, var_hash, objIndex);
 						} else {
-							raise_error("Failure in serialize");
+							Logger::Error("Failure in serialize");
 						}
 					} else {
 						amf3_serialize_var(buf, (Variant&)val, var_hash );
@@ -2010,7 +2010,7 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 							} else if (objIndex) {
 							    amf3_serialize_var(buf, (Variant&)val, var_hash, objIndex);
 							} else {
-								raise_error("Failure in serialize");
+								Logger::Error("Failure in serialize");
 							}
 						} else {
 							amf3_serialize_var(buf, (Variant&)val, var_hash );
