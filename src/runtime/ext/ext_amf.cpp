@@ -1032,7 +1032,7 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
          /*  for(j = 0; j < memberCount; j++) fixed value */
          /*  iterate over all the key */
           Array odata = Array::Create();
-          CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata)); 
+          CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata,true)); 
 
 	for (ArrayIter iter(h); iter; ++iter) {
 		Variant key(iter.first());
@@ -1043,7 +1043,8 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
                 if(key.isInteger())
                 {
                         char txt[20];
-                        sprintf(txt,"%lld",key.toInt64());
+                        unsigned long a = key.toInt64();
+                        sprintf(txt,"%d",a);
                         amf3_write_string(buf,txt,strlen(txt), AMF_STRING_AS_SAFE_TEXT,var_hash );
                 }
                 else if(key.isString())
@@ -1343,7 +1344,7 @@ static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc,
 static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z, int isArray, amf_serialize_data_t*var_hash )
 {
 	  Array odata = Array::Create();
-	  CArrRef h = isArray ? z.toCArrRef() : (z.getObjectData()->o_toArray_withInfo(&odata)); 
+	  CArrRef h = isArray ? z.toCArrRef() : (z.getObjectData()->o_toArray_withInfo(&odata,true)); 
 
         for (ArrayIter iter(h); iter; ++iter) {
                 Variant key(iter.first());
@@ -1353,7 +1354,8 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
                 {
                         char txt[20];
                         int length;
-                        sprintf(txt,"%lld",key.toInt64());
+			unsigned long a = key.toInt64();
+                        sprintf(txt,"%d",a);
                         length = strlen(txt);
                         amf0_write_short(buf,length  );
                         amf_write_string(buf,txt,length  );
@@ -1699,7 +1701,7 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                 //uint key_len;
                 int rt;
 		Array odata = Array::Create();
-		CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata));
+		CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata,true));
 
                 /**
                  * Special Handling for arrays with __amf_recordset__
@@ -1875,7 +1877,9 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                         case KindOfInt64:
                                                         {
                                                                 char txt[20];
-                                                                sprintf(txt,"%lld",key.toInt64());
+								unsigned long a = key.toInt64();
+
+                                                                sprintf(txt,"%d",a);
                                                                 amf3_write_string(buf, txt,strlen(txt),AMF_STRING_AS_SAFE_TEXT,var_hash );
                                                         }
                                                         break;
@@ -2192,7 +2196,7 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
 							} else if (myht.getType() == KindOfObject) {
 								Array odata = Array::Create();
 								Variant typeinfo,offsetinfo;
-								myht.getObjectData()->o_toArray_withInfo(&odata);
+								myht.getObjectData()->o_toArray_withInfo(&odata,true);
 							 	String realKey("id");
 								DataType retType;
 								if (odata.exists(realKey)) {

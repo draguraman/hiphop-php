@@ -123,7 +123,6 @@ class ObjectData : public CountableNF {
   bool o_instanceof(CStrRef s) const;
   virtual bool o_instanceof_hook(CStrRef s) const;
   virtual ObjectData *getRedeclaredParent() const { return 0; }
-
   // class info
   CStrRef o_getClassName() const;
   CStrRef o_getParentName() const;
@@ -181,7 +180,7 @@ class ObjectData : public CountableNF {
 
   // properties
   virtual Array o_toArray() const;
-  virtual Array o_toArray_withInfo(Array* p) const;
+  virtual Array o_toArray_withInfo(Array* p, bool pubOnly = false) const;
   virtual Array o_toIterArray(CStrRef context, bool getRef = false);
   virtual Array o_getDynamicProperties() const;
   void *o_realPropPtr(CStrRef propName, int flags, DataType *retType, bool forceVariant,

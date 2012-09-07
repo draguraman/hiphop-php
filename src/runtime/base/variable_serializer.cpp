@@ -354,12 +354,12 @@ void VariableSerializer::write(CObjRef v) {
 }
 
 void VariableSerializer::write(CVarRef v, bool isArrayKey /* = false */) {
+  setReferenced(v.isReferenced());
+  setRefCount(v.getRefCount());
   if (!isArrayKey && v.isObject()) {
     write(v.toObject());
     return;
   }
-  setReferenced(v.isReferenced());
-  setRefCount(v.getRefCount());
   v.serialize(this, isArrayKey);
 }
 
@@ -428,12 +428,12 @@ void VariableSerializer::writeOverflow(void* ptr, bool isObject /* = false */) {
       PointerCounterMap::const_iterator iter = m_arrayIds->find(ptr);
       ASSERT(iter != m_arrayIds->end());
       int id = iter->second;
-      if (isObject) {
-        m_buf->append("r:");
+      if (wasRef) {
+        m_buf->append("R:");
         m_buf->append(id);
         m_buf->append(';');
-      } else if (wasRef) {
-        m_buf->append("R:");
+      } else if (isObject) {
+        m_buf->append("r:");
         m_buf->append(id);
         m_buf->append(';');
       } else {

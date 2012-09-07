@@ -48,7 +48,10 @@ class IGBinarySerializer {
       bool compact_strings; /**< Check for duplicate strings. */
       struct hash_si strings; /**< Hash of already serialized strings. */
       struct hash_si objects; /**< Hash of already serialized objects. */
+      struct hash_si seenHead; /**< Hash of seen Head Data Ptrs */
+      std::vector<int> listHead;
       int string_count; /**< Serialized string count, used for back referencing */
+      int numEmptyArrays;
       int error; /**< Error number. Not used. */
     };
 
@@ -95,7 +98,12 @@ private:
 
   inline static void writeToBuffer(struct igbinary_serialize_data *igsd, uint8_t c);
   inline static void writeToBuffer(struct igbinary_serialize_data *igsd, const char* p);
+
+inline static bool igbinary_check_for_head(struct igbinary_serialize_data *igsd,CVarRef z);
+inline static void igbinary_insert_new_head(struct igbinary_serialize_data *igsd,CVarRef z, bool isObject);
 };
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 }

@@ -101,6 +101,9 @@ class StringData {
 
   ~StringData() { releaseData();}
 
+  bool isReference() {
+	return ((_count > 1) && !isStatic());
+  }
   /**
    * Informational.
    */

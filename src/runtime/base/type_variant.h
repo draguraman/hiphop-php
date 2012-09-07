@@ -116,7 +116,6 @@ class Variant {
   ~Variant();
 
   void reset(); // only for special memory sweeping!
-
   /**
    * Constructors. We can't really use template<T> here, since that will make
    * Variant being able to take many other external types, messing up those
@@ -345,7 +344,7 @@ class Variant {
   }
 
   void *asDataPtr() const {
-      if (m_type == KindOfArray) {
+      /*if (m_type == KindOfArray) {
 	if (m_data.parr->size() == 0) {
 		if (m_data.parr->isStatic()) {
 			return (void*)this;
@@ -353,11 +352,14 @@ class Variant {
 	}
       } else if (m_type == KindOfVariant && m_data.pvar->m_type == KindOfArray) {
    return m_data.pvar;
-}
+}*/
 
-      return m_type == KindOfVariant ? m_data.pvar->asDataPtr() : (void*)m_data.pvar;
+      return /*m_type == KindOfVariant ? m_data.pvar->asDataPtr() :*/ (void*)m_data.pvar;
     }
 
+  void *getDataPtr() const {
+	return m_type == KindOfVariant ? m_data.pvar->getDataPtr() : (void*)m_data.pvar;
+  }
   ObjectData *objectForCall() const {
     if (m_type == KindOfObject) return m_data.pobj;
     if (m_type == KindOfVariant) {

@@ -58,7 +58,6 @@ IGBinarySerializer::serialize(CVarRef v) {
     raise_warning("igbinary_serialize: cannot init igsd");
     return null_string;
   }
-
   if (igbinary_serialize_header(&igsd TSRMLS_CC) != 0) {
     raise_warning("igbinary_serialize: cannot write header");
     igbinary_serialize_data_deinit(&igsd TSRMLS_CC);
@@ -88,7 +87,8 @@ int IGBinarySerializer::igbinary_serialize_data_init(
   igsd->buffer_capacity = 32;
   igsd->string_count = 0;
   igsd->error = 0;
-
+  igsd->numEmptyArrays = 0;
+  igsd->listHead.clear();
   igsd->buffer = (uint8_t *) emalloc(igsd->buffer_capacity);
   if (igsd->buffer == NULL) {
     return 1;
@@ -98,6 +98,7 @@ int IGBinarySerializer::igbinary_serialize_data_init(
   if (!igsd->scalar) {
     hash_si_init(&igsd->strings, 16);
     hash_si_init(&igsd->objects, 16);
+    hash_si_init(&igsd->seenHead, 16);
   }
 
   igsd->compact_strings = true; // (bool) IGBINARY_G(compact_strings);
@@ -116,7 +117,9 @@ void IGBinarySerializer::igbinary_serialize_data_deinit(
   if (!igsd->scalar) {
     hash_si_deinit(&igsd->strings);
     hash_si_deinit(&igsd->objects);
+    hash_si_deinit(&igsd->seenHead);
   }
+  igsd->listHead.clear();
 }
 /* }}} */
 /* {{{ igbinary_serialize_header */
@@ -428,6 +431,58 @@ void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data 
 }
 
 /* }}} */
+/* {{{ igbinay_insert_new_head*/
+/** insert new head ptr to check for references. */
+#define START_OBJECT 1
+#define START_ARRAY 2
+#define END_OF_OBJECT 3
+void IGBinarySerializer::igbinary_insert_new_head(struct igbinary_serialize_data *igsd,CVarRef z,bool isObject)
+{
+  void *key = z.getDataPtr();
+  uint32_t i = 0;
+  int marker =(isObject)?START_OBJECT:START_ARRAY;
+  igsd->listHead.push_back(marker);
+  if (hash_si_find(&igsd->seenHead, (char *) &key, sizeof(key), &i) == 1) {
+    uint32_t t = igsd->listHead.size() - 1;//hash_si_size(&igsd->seenHead);
+    hash_si_insert(&igsd->seenHead, (char *) &key, sizeof(key), t);
+  }
+}
+/* }}} */
+
+/* }}} */
+/* {{{ igbinay_insert_new_head*/
+/** insert new head ptr to check for references. */
+bool IGBinarySerializer::igbinary_check_for_head(struct igbinary_serialize_data *igsd,CVarRef z) {
+	// reference to object takes precedence over reference to self
+	if (z.getRawType() == KindOfVariant && z.getType() == KindOfArray) {
+	  void *key = z.getDataPtr();
+	  uint32_t i = 0;
+	  if (hash_si_find(&igsd->seenHead, (char *) &key, 
+              sizeof(key), &i)!= 1) {
+		std::vector<int>::const_iterator start = igsd->listHead.begin();
+		start+=i;
+		int state = 0;
+		while(start != igsd->listHead.end()) {
+			if (*start == START_OBJECT) {
+				++state;
+			} else if (*start == END_OF_OBJECT) {
+				if (state > 0) {
+					--state;
+				}
+			}	
+			start++;
+		}
+		if (state > 0) {
+		     return false;
+		} else {	
+		     return true;
+		}
+	  }
+	  return false;
+	} 
+	return false;
+}
+/* }}} */
 /* {{{ igbinay_serialize_array */
 /** Serializes array or objects inner properties. */
 int IGBinarySerializer::igbinary_serialize_array(
@@ -466,6 +521,8 @@ int IGBinarySerializer::igbinary_serialize_array(
     return 0;
   }
 
+  // new object so insert a new head
+  igbinary_insert_new_head(igsd,z,object);
   /* serialize properties. */
   for (ArrayIter iter(h); iter; ++iter) {
     CVarRef key = iter.first();
@@ -500,8 +557,7 @@ int IGBinarySerializer::igbinary_serialize_array(
         return 1;
       }
     } else {
-	void *objIndex = NULL;
-	if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+		{
 		Variant *p = NULL;
 		Variant tmp;
 		//get the real property name for private members
@@ -520,9 +576,15 @@ int IGBinarySerializer::igbinary_serialize_array(
 		}
 		if (typeinfo.toInt64() == (int)KindOfVariant) { 
 		p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,clsInfo->getName());
-		} else {
-		objIndex = (char *)(z.getObjectData()) + offsetinfo.toInt64();
+		if (p->getRawType() == KindOfVariant) {
+			CVarRef pass = *p;
+			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
+			  return 1;
+			} 
+			continue;
 		}
+		} 
+	        /* Not a variant fall through*/
 		} else if (z.getType() == KindOfArray) {
 			if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
 			   p = z.toArray().lvalPtr(key.toCStrRef(),false,false);	
@@ -532,22 +594,16 @@ int IGBinarySerializer::igbinary_serialize_array(
 		} else  {
 			raise_error("Invalid type of object seen in serialize array");
 		}
-		if (p) {
-	        if (igbinary_serialize_zval(igsd, *p TSRMLS_CC)) {
-		  return 1;
-	        } 
-		} else if (objIndex) {
-		
-		if (igbinary_serialize_zval(igsd, val TSRMLS_CC, objIndex)) {
-                  return 1;
-                }
-		} else {
-			raise_error("Failure in serialize");
-		}
-	} else {
+		if (p && p->getRawType()==KindOfVariant) {
+			CVarRef pass = *p;
+			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
+			  return 1;
+			} 
+			continue;
+		}	
+	}
       if (igbinary_serialize_zval(igsd, val TSRMLS_CC)) {
         return 1;
-      }
       }
     }
   }
@@ -573,8 +629,20 @@ int IGBinarySerializer::igbinary_serialize_array_ref(
   key.z = objIndex;
   }
 
+  if (z.getType() == KindOfArray && z.toCArrRef().empty()) {
+	if (z.getRawType() != KindOfVariant) {
+	// Basically empty arrays that are not references should not get into cache at all but need to be counted as objects.
+	    igsd->numEmptyArrays++;
+	    return 1;
+	} /*else {
+	// For References we cached the inner variant
+	}*/
+  }
+
   if (hash_si_find(&igsd->objects, (char *) &key, sizeof(key), i) == 1) {
-    t = hash_si_size(&igsd->objects);
+    // as empty arrays do not get added to the cache we need to add their
+    // number to the next cache's entry
+    t = hash_si_size(&igsd->objects) + igsd->numEmptyArrays;
     hash_si_insert(&igsd->objects, (char *) &key, sizeof(key), t);
     return 1;
   } else {
@@ -622,19 +690,21 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
   if (n == 0) {
     return 0;
   }
+  igbinary_insert_new_head(igsd,z,true);
+
   Array odata = Array::Create();
   z.getObjectData()->o_toArray_withInfo(&odata);
   //Array wanted = Array::Create();
   for (ArrayIter iter(props); iter; ++iter) {
-    CVarRef varName = iter.second();
-    if( !varName.isString() ) {
+    CVarRef key= iter.second();
+    if( !key.isString() ) {
       raise_warning("igbinary_serialize(): __sleep should return an array only containing the names of instance-variables to serialize. bad_prop=%s",
-                f_print_r(varName, true).toCStrRef().data());
+                f_print_r(key, true).toCStrRef().data());
       igbinary_serialize_null(igsd TSRMLS_CC);
       continue;
     }
 
-    String name = varName.toString();
+    String name = key.toString();
     CVarRef val = const_cast<ObjectData*>(od)->o_getUnchecked(name, od->o_getClassName());
     if (!od->o_exists(name, od->o_getClassName())) {
       raise_warning("\"%s\" returned as member variable from "
@@ -655,15 +725,14 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
       igbinary_serialize_null(igsd TSRMLS_CC);
     } else {
         writeSerializedProperty(igsd, name, clsInfo);
-	// Need to handle empty arrays here also
-	void *objIndex = NULL;
-	if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+		{
 		Variant *p = NULL;
 		Variant tmp;
-		DataType retType;
-		Variant typeinfo,offsetinfo;
 		//get the real property name for private members
-		String realKey = varName.toString().lastToken((char)0);
+		String realKey = key.toString().lastToken((char)0);
+		DataType retType;
+		if (z.getType() == KindOfObject) {
+		Variant typeinfo,offsetinfo;
 		if (odata.exists(realKey)) {
 		Array typedata = odata[realKey];
 		typeinfo = typedata["type"];
@@ -675,22 +744,36 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
 		}
 		if (typeinfo.toInt64() == (int)KindOfVariant) { 
 		p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,clsInfo->getName());
-		} else {
-		objIndex = (char *)(z.getObjectData()) + offsetinfo.toInt64();
+		if (p->getRawType() == KindOfVariant) {
+			CVarRef pass = *p;
+			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
+			  return 1;
+			} 
+			continue;
 		}
-		if (p) {
-	        if (igbinary_serialize_zval(igsd, *p TSRMLS_CC)) {
-		  return 1;
-	        } 
-		} else if (objIndex) {
-		
-		if (igbinary_serialize_zval(igsd, val TSRMLS_CC, objIndex)) {
-                  return 1;
-                }
-		} 
-		} else {
-        igbinary_serialize_zval(igsd, val TSRMLS_CC);
+		} /*else {
+		        raise_error("Invalid holder of reference");
+		}*/
+		} else if (z.getType() == KindOfArray) {
+			if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
+			   p = z.toArray().lvalPtr(key.toCStrRef(),false,false);	
+			} else {
+			   p = z.toArray().lvalPtr(key.asInt64Val(),false, false);	
+			}
+		} else  {
+			raise_error("Invalid type of object seen in serialize array");
+		}
+		if (p && p->getRawType()==KindOfVariant) {
+			CVarRef pass = *p;
+			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
+			  return 1;
+			} 
+			continue;
+		}	
 	}
+      if (igbinary_serialize_zval(igsd, val TSRMLS_CC)) {
+        return 1;
+      }
     }
   }
 
@@ -758,7 +841,6 @@ int IGBinarySerializer::igbinary_serialize_object(
   if (igbinary_serialize_array_ref(igsd, z, true TSRMLS_CC) == 0) {
     return r;
   }
-
   const ObjectData *od = z.getObjectData();
   CStrRef className = od->o_getClassName();
   const ClassInfo* clsInfo = ClassInfo::FindClass(className);
@@ -819,9 +901,12 @@ int IGBinarySerializer::igbinary_serialize_object(
       igbinary_serialize8(igsd, igbinary_type_array8 TSRMLS_CC);
       r = igbinary_serialize8(igsd, 0 TSRMLS_CC);
     }
+    igsd->listHead.push_back(END_OF_OBJECT);
     return r;
   } else {
-    return igbinary_serialize_array(igsd, z, clsInfo, incomplete_class TSRMLS_CC);
+    r =  igbinary_serialize_array(igsd, z, clsInfo, incomplete_class TSRMLS_CC);
+    igsd->listHead.push_back(END_OF_OBJECT);
+    return r;
   }
 }
 /* }}} */
@@ -829,9 +914,10 @@ int IGBinarySerializer::igbinary_serialize_object(
 /** Serialize zval. */
 int IGBinarySerializer::igbinary_serialize_zval(
     struct igbinary_serialize_data *igsd, CVarRef z TSRMLS_DC, void *objIndex /* = NULL */) {
-
-  if (Z_ISREF_P(z)) {
-    igbinary_serialize8(igsd, (uint8_t) igbinary_type_ref TSRMLS_CC);
+  void *hash_key = z.asDataPtr(); 
+  uint32_t k = 0;
+  if (Z_ISREF_P(z) || igbinary_check_for_head(igsd,z)||((z.getRawType() == KindOfVariant) && (hash_si_find(&igsd->objects, (char *)&hash_key , sizeof(hash_key), &k) !=1))) {
+        igbinary_serialize8(igsd, (uint8_t) igbinary_type_ref TSRMLS_CC);
     /* Complex types serialize a reference, scalars do not... */
     /* FIXME: Absolutely wrong level to check this. */
     switch (Z_TYPE_P(z)) {

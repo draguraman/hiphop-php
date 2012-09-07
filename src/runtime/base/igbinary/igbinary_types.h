@@ -79,7 +79,7 @@ enum DataType {
 };
   */
 
-#define Z_ISREF_P(z) (z.getRawType() == KindOfVariant)
+#define Z_ISREF_P(z) (z.isReferenced())
 #define Z_TYPE_P(z) (!z.isInitialized() ? IS_NULL : (z.isResource() ? IS_RESOURCE : ((z.getType() == KindOfInt32)?IS_LONG:z.getType())))
 
 #define Z_STRVAL_P(zval_p)      ((char *)(zval_p).toString().c_str())

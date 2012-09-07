@@ -58,6 +58,7 @@ class IGBinaryUnserializer {
       size_t strings_capacity; /**< Unserialized string array capacity. */
 
       std::vector<Variant*> m_refs;
+      std::vector<Variant> holderVariants;
 //      void **references; /**< Unserialized Arrays/Objects. */
 //      size_t references_count; /**< Unserialized array/objects count. */
 //      size_t references_capacity; /**< Unserialized array/object array capacity. */
@@ -80,7 +81,7 @@ public:
   Variant unserialize(CStrRef v);
 
 private:
-
+  inline static Variant& getHolderVariant(struct igbinary_unserialize_data *igsd TSRMLS_DC);
   inline static int igbinary_unserialize_data_init(struct igbinary_unserialize_data *igsd TSRMLS_DC);
   inline static void igbinary_unserialize_data_deinit(struct igbinary_unserialize_data *igsd TSRMLS_DC);
 
