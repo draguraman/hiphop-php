@@ -43,7 +43,6 @@ IMPLEMENT_DEFAULT_EXTENSION(amf);
 
 static int printstrings (const char * buf, const int bufLen);
 
-
 #define amf_error_docref php_error_docref
 #define amf_error_docref1 php_error_docref
 
@@ -66,31 +65,6 @@ if (E_WARNING == b) {                \
 } else {                             \
 	Logger::Error(__VA_ARGS__);  \
 } }                                
-/*static void php_error_docref(const char *docref, int type, const char *format, ...) {
-     va_list args;
-
-     va_start(args, format);
-
-     switch(type) {
-	case E_WARNING:
-		Logger::Warning(format,args);
-		break;
-	case E_ERROR:
-	default:
-		Logger::Error(format,args);
-		break;
-     }
-     va_end(args);
-}*/
-/*static void amf_error_docref(const char *docref, int type, const char *format, ...)
-{
-        php_error_docref(docref, type, format);
-}
-
-static void amf_error_docref1(const char *docref , int type, const char *format, ...)
-{
-        php_error_docref(docref, type, format);
-}*/
 
 static int encode2hex (const char * data, const unsigned int dataLen,
                  char *hexData, unsigned int *hexDataLen)
@@ -186,39 +160,6 @@ static int printstrings (const char * buf, const int bufLen)
  	}
   	return 0;
 }
-
-/*
-static int findHexIndex (const char  data)
-{
-  	const char  hexArr[] = "0123456789ABCDEF";
-  	unsigned int i = 0;
-  	for (i = 0 ; i < sizeof (hexArr); i++)
-  	{
-    		if (hexArr[i] == data) return i;
-  	}
-
-  	return -1;
-}
-static int decode2raw (const char * hexData, const unsigned int hexDataLen,
-                 char *data, unsigned int *dataLen)
-{
-  	unsigned int i, l;
-  	if (!hexData || !data  || !dataLen || *dataLen < (hexDataLen/2)) return -1;
-
-  	memset (data, 0, *dataLen);
-  	for (i = 0, l = 0 ; i < hexDataLen ; i+=2)
-  	{
-    		unsigned int j = findHexIndex (hexData[i]);
-    		unsigned int k = findHexIndex (hexData[i + 1]);
-    		if (j > 15 || k > 15) return -1;
-    		data [l++] = (j << 4) + k;
-  	}
-
-  	*dataLen = l;
-
-  	return 0;
-}
-*/
 
 /*  AMF enumeration {{{1*/
 
@@ -366,6 +307,7 @@ struct __amf_serialize_data_t__
         HashTable objects;   /*  stack of objects for AMF3, no reference */
         HashTable strings;   /*  stack of strings for AMF3: string key => inde */
         HashTable classes;       /*  stack of classes for AMF3, allocate */
+        std::vector<Variant> variantHolder;
         Variant  callbackTarget;
         Variant  callbackFx;
         Variant  zEmpty_string;
@@ -376,6 +318,7 @@ struct __amf_serialize_data_t__
         int nextStringIndex;
 	public:
          __amf_serialize_data_t__() {
+		variantHolder.clear();
         	callbackTarget = null_variant;
         	callbackFx = null_variant;
         	zEmpty_string ="";
@@ -453,7 +396,8 @@ typedef amf_serialize_output_t *amf_serialize_output;
                         var_hash.objects0.clear();\
                         var_hash.objects.clear();\
                         var_hash.strings.clear();\
-                        var_hash.classes.clear();
+                        var_hash.classes.clear();\
+			var_hash.variantHolder.clear();
 
 /**  initializes a zval to a HashTable of zval with a possible number of items */
 static int amf_array_init(Variant&arg, int count )
@@ -731,12 +675,28 @@ static int variant_hash_find(const Variant& ht, const char * field, Variant & pD
         return FAILURE;
 }
 
-static int variant_hash_find(const Variant& ht, int i, Variant& pData)
+static int variant_hash_find(const Variant& ht, const Variant& key, Variant& pData)
 {
-	std::ostringstream ss;
- 	ss<<i;
-        string k = ss.str();
-	return variant_hash_find(ht,k.c_str(),pData);
+        if (ht.getType() == KindOfArray) {
+	    if (ht.toArray().exists(key)) {
+		pData = (ht.toArray())[key];	
+		return SUCCESS;
+	    } else {
+		Logger::Error("Failed to find %s in array\n", key.toString().c_str());
+		return FAILURE;
+	    }
+	} else if (ht.getType() == KindOfObject && (key.getType() == KindOfString  || key.getType() == KindOfStaticString)) {
+	   if (ht.getObjectData()->o_exists(key.toString(),ht.getObjectData()->o_getClassName())) {
+		pData = ht.getObjectData()->o_getUnchecked(key.toString(),ht.getObjectData()->o_getClassName());
+		return SUCCESS;
+	   } else {
+		Logger::Error("Failed to find %s in array\n", key.toString().c_str());
+		return FAILURE;
+	   } 
+	} else  {
+	    return FAILURE;
+	}
+	return FAILURE;
 }
 
 #define util_hash_find(h,k,d) util_hash_index_find(h, k, d)
@@ -821,7 +781,9 @@ static int amf_cache_zval(HashTable *var_hash, const Variant& var, ulong * old, 
                                 *old = *nextIndex;
                                 *nextIndex = *nextIndex+1;  /*  equal to the number of element */
                         }
-                        util_hash_quick_add(var_hash, idx, *old);
+			if (!(var.getType() == KindOfArray && var.toCArrRef().empty())) {
+				util_hash_quick_add(var_hash, idx, *old);
+			}
                 }
         return SUCCESS;
 }
@@ -1050,7 +1012,7 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
                 else if(key.isString())
                 {
                          /*  skip arra */
-                        if(key.toString().length() == 0)
+                        if(key.toString().length() == 0 || key.toString().c_str()[0]=='\0')
                         {
                                 continue;
                         }
@@ -1064,14 +1026,13 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
                 //        amf_write_byte(buf, AMF3_UNDEFINED);
                 //}
                 //else
-		void *objIndex = NULL;
-		if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+		 {
 			Variant *p = NULL;
 			Variant tmp;
 			//get the real property name for private members
-			String realKey = key.toString().lastToken((char)0);
 			DataType retType;
 			if (myht.getType() == KindOfObject) {
+			String realKey = key.toString().lastToken((char)0);
 			Variant typeinfo,offsetinfo;
 			if (odata.exists(realKey)) {
 				Array typedata = odata[realKey];
@@ -1084,8 +1045,11 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 			}
 			if (typeinfo.toInt64() == (int)KindOfVariant) { 
 			p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName());
-			} else {
-			objIndex = (char *)(myht.getObjectData()) + offsetinfo.toInt64();
+			if (p && p->getRawType() == KindOfVariant) {
+				CVarRef pass = *p;
+                                amf3_serialize_var(buf, pass, var_hash);
+				continue;
+			}
 			}
 			} else if (myht.getType() == KindOfArray) {
 				if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
@@ -1096,16 +1060,14 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 			} else  {
 				raise_error("Invalid type of object seen in serialize array");
 			}
-			if (p) {
-                            amf3_serialize_var(buf, (Variant&)(*p), var_hash );
-			} else if (objIndex) {
-                            amf3_serialize_var(buf, (Variant&)val, var_hash, objIndex);
-			} else {
-				Logger::Error("Failure in serialize");
+			if (p && p->getRawType() == KindOfVariant) {
+			    CVarRef pass = *p;
+                            amf3_serialize_var(buf, pass, var_hash);
+			    continue;
 			}
-		} else {
-                        amf3_serialize_var(buf, (Variant&)val, var_hash );
-	        }
+		} 
+		amf3_serialize_var(buf, (Variant&)val, var_hash );
+	        
 
         }
         amf3_write_emptystring(buf );
@@ -1363,7 +1325,7 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
                 else
                 {
                          /*  skip private member */
-                        if(isArray == 0 && key.toString().length()==0)
+                        if(isArray == 0 && (key.toString().length()==0 || (key.toString().c_str()[0] == '\0')))
                         {
                                 continue;
                         }
@@ -1377,14 +1339,13 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
                 //        amf_write_byte(buf, AMF0_UNDEFINED);
                 //}
                 //else
-		void *objIndex = NULL;
-		if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+		{
 			Variant *p = NULL;
 			Variant tmp;
 			//get the real property name for private members
-			String realKey = key.toString().lastToken((char)0);
 			DataType retType;
 			if (z.getType() == KindOfObject) {
+			String realKey = key.toString().lastToken((char)0);
 			Variant typeinfo,offsetinfo;
 			if (odata.exists(realKey)) {
 				Array typedata = odata[realKey];
@@ -1397,9 +1358,13 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 			}
 			if (typeinfo.toInt64() == (int)KindOfVariant) { 
 			p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,z.getObjectData()->o_getClassName());
-			} else {
-			objIndex = (char *)(z.getObjectData()) + offsetinfo.toInt64();
+			if (p && p->getRawType() == KindOfVariant) {
+			    CVarRef pass = *p;
+                            amf0_serialize_var(buf, pass, var_hash );
+			    continue;
 			}
+			}
+			/* Fall Through */
 			} else if (z.getType() == KindOfArray) {
 				if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
 				   p = z.toArray().lvalPtr(key.toCStrRef(),false,false);	
@@ -1410,15 +1375,12 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 				raise_error("Invalid type of object seen in serialize array");
 			}
 			if (p) {
-                            amf0_serialize_var(buf, (Variant&)(*p), var_hash );
-			} else if (objIndex) {
-                            amf0_serialize_var(buf, (Variant&)val, var_hash, objIndex);
-			} else {
-				Logger::Error("Failure in serialize");
-			}
-		} else {
-                        amf0_serialize_var(buf, (Variant&)val, var_hash );
-	        }
+			    CVarRef pass = *p;
+                            amf0_serialize_var(buf, pass, var_hash );
+			    continue;
+			} 		
+		} 
+		amf0_serialize_var(buf, val, var_hash );
         }
         amf0_write_endofobject(buf );
 }
@@ -1702,6 +1664,8 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                 int rt;
 		Array odata = Array::Create();
 		CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata,true));
+		const Variant ROWSTRING="rows";
+		const Variant COLSTRING="columns";
 
                 /**
                  * Special Handling for arrays with __amf_recordset__
@@ -1714,8 +1678,9 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                         int nColumns,nRows,iRow;
                         int iClassDef = 0; //keeping compiler happy
 
-                        if (variant_hash_find(myht, (char*)"rows", rows) == SUCCESS &&
-                                        variant_hash_find(myht, (char*)"columns", columns) == SUCCESS &&
+
+                        if (variant_hash_find(myht, ROWSTRING, rows) == SUCCESS &&
+                                        variant_hash_find(myht, COLSTRING, columns) == SUCCESS &&
                                         rows.isArray() &&
                                         columns.isArray() )
                         {
@@ -1768,11 +1733,13 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                 amf3_write_objecthead(buf, nColumns << AMF_CLASS_MEMBERCOUNT_SHIFT |AMF_INLINE_CLASS|AMF_INLINE_ENTITY);
                                                 amf3_write_emptystring(buf );  /*  empty class nam */
                                                 iClassDef = var_hash->nextClassIndex++;
+						Variant iColumnVar = iColumn;
+                                                Variant columnName;
 
                                                 for(iColumn = 0; iColumn < nColumns; iColumn++)
                                                 {
-                                                        Variant columnName;
-                                                        variant_hash_find(htColumns, iColumn,columnName);
+							iColumnVar = iColumn;
+                                                        variant_hash_find(htColumns, iColumnVar,columnName);
                                                         if(!columnName.isString())
                                                         {
                                                                 char key[255];
@@ -1804,12 +1771,12 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                 }
                                                 else
                                                 {
-							if (zValue.getType() == KindOfArray) {
 							// Fixme relookup
 							Variant *p = htRow.toArray().lvalPtr(key.toInt64(),false, false);
-							amf0_serialize_var(buf, *p, var_hash );
+							if (p && p->getRawType() == KindOfVariant) {
+							amf3_serialize_var(buf, *p, var_hash );
 							} else {
-							amf0_serialize_var(buf, zValue, var_hash );
+							amf3_serialize_var(buf, zValue, var_hash );
 							}
 
                                                 }
@@ -1895,14 +1862,13 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                         //        amf_write_byte(buf, AMF3_UNDEFINED);
                                        // }
                                         //else
-					void *objIndex = NULL;
-					if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+					{
 						Variant *p = NULL;
 						Variant tmp;
 						//get the real property name for private members
-						String realKey = key.toString().lastToken((char)0);
 						DataType retType;
 						if (myht.getType() == KindOfObject) {
+						String realKey = key.toString().lastToken((char)0);
 						Variant typeinfo,offsetinfo;
 						if (odata.exists(realKey)) {
 							Array typedata = odata[realKey];
@@ -1915,9 +1881,11 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 						}
 						if (typeinfo.toInt64() == (int)KindOfVariant) { 
 						p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName());
-						} else {
-						objIndex = (char *)(myht.getObjectData()) + offsetinfo.toInt64();
+						if (p && p->getRawType() == KindOfVariant) {
+						    amf3_serialize_var(buf, (Variant&)(*p), var_hash );
+						    continue;
 						}
+						} 						
 						} else if (myht.getType() == KindOfArray) {
 							if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
 							   p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);	
@@ -1927,19 +1895,15 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 						} else  {
 							raise_error("Invalid type of object seen in serialize array");
 						}
-						if (p) {
+						if (p && p->getRawType() == KindOfVariant) {
 						    amf3_serialize_var(buf, (Variant&)(*p), var_hash );
-						} else if (objIndex) {
-						    amf3_serialize_var(buf, (Variant&)val, var_hash, objIndex);
-						} else {
-							Logger::Error("Failure in serialize");
+						    continue;
 						}
-					} else {
-						amf3_serialize_var(buf, (Variant&)val, var_hash );
 					}
-
-                                }
+					amf3_serialize_var(buf, (Variant&)val, var_hash );
+					}
                                 amf3_write_emptystring(buf );
+
                         }
                         else
                         {
@@ -1977,14 +1941,13 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                 }
                                                 if(skip)
                                                         continue;
-						void *objIndex = NULL;
-						if (val.getType() == KindOfArray /*&& val.toCArrRef()->size() == 0*/) {
+						{
 							Variant *p = NULL;
 							Variant tmp;
 							//get the real property name for private members
-							String realKey = key.toString().lastToken((char)0);
 							DataType retType;
 							if (myht.getType() == KindOfObject) {
+							String realKey = key.toString().lastToken((char)0);
 							Variant typeinfo,offsetinfo;
 							if (odata.exists(realKey)) {
 								Array typedata = odata[realKey];
@@ -1997,10 +1960,12 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 							}
 							if (typeinfo.toInt64() == (int)KindOfVariant) { 
 							p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName());
-							} else {
-							objIndex = (char *)(myht.getObjectData()) + offsetinfo.toInt64();
+							if (p && p->getRawType() == KindOfVariant) {
+							    amf3_serialize_var(buf, (Variant&)(*p), var_hash );
+							    continue;
 							}
-							} else if (myht.getType() == KindOfArray) {
+							} 							
+						} else if (myht.getType() == KindOfArray) {
 								if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
 								   p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);	
 								} else {
@@ -2009,15 +1974,12 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 							} else  {
 								raise_error("Invalid type of object seen in serialize array");
 							}
-							if (p) {
+							if (p && p->getRawType() == KindOfVariant) {
 							    amf3_serialize_var(buf, (Variant&)(*p), var_hash );
-							} else if (objIndex) {
-							    amf3_serialize_var(buf, (Variant&)val, var_hash, objIndex);
-							} else {
-								Logger::Error("Failure in serialize");
-							}
-						} else {
-							amf3_serialize_var(buf, (Variant&)val, var_hash );
+							    continue;
+							}	
+						}
+						amf3_serialize_var(buf, (Variant&)val, var_hash );
 						}
 
                                                 //if (zend_hash_get_current_data_ex(myht, (void **) &data, &pos) == SUCCESS && data != NULL)
@@ -2025,7 +1987,6 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                 //{
                                                 //        amf_write_byte(buf, AMF3_UNDEFINED);
                                                 //}
-                                        }
                                 }
                                  /*  place the empty strin */
                                 amf3_write_emptystring(buf );
@@ -2034,23 +1995,26 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                 if(num_count > 0)
                                 {
                                         int iIndex;
-
+					Variant iIndexVar;
                                          /*  lookup the key if existent (use 0x0 undefined */
                                         for(iIndex = 0; iIndex <= max_index; iIndex++)
                                         {
-                                                if(variant_hash_find(myht, iIndex,data) == FAILURE)
+						iIndexVar = iIndex;
+                                                if(variant_hash_find(myht, iIndexVar,data) == FAILURE)
                                                 {
                                                         amf_write_byte(buf, AMF3_UNDEFINED);
                                                 }
                                                 else
                                                 {
-							if (data.getType() == KindOfArray) {
+							{
                                                 // Fixme relookup
 							Variant *p = myht.toArray().lvalPtr(iIndex,false, false);
+							if (p && p->getRawType() == KindOfVariant) {
 							amf3_serialize_var(buf, *p, var_hash );
 							} else {
 	
                                                         amf3_serialize_var(buf, data, var_hash );
+							}
 							}
                                                 }
                                         }
@@ -2123,6 +2087,10 @@ static void amf3_serialize_var(amf_serialize_output buf, const Variant& struc, a
 
 }
 
+Variant& amf_get_holder(amf_serialize_data_t* var_hash) {
+	var_hash->variantHolder.push_back(null_variant);
+	return var_hash->variantHolder.back();
+}
 /**
  *  serializes an array in AMF0 format
  *  It checks form _amf_recordset_
@@ -2148,14 +2116,17 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                         Variant htRows;
                         Variant htColumns;
                         int nColumns,nRows,iRow;
+			const Variant ROWSTRING="rows";
+			const Variant IDSTRING ="id";
+			const Variant COLSTRING="columns";
 
-                        if (variant_hash_find(myht, (char*)"rows", rows) == SUCCESS &&
-                                        variant_hash_find(myht, (char*)"columns", columns) == SUCCESS &&
+                        if (variant_hash_find(myht, ROWSTRING, rows) == SUCCESS &&
+                                        variant_hash_find(myht, COLSTRING, columns) == SUCCESS &&
                                         rows.isArray() &&
                                         columns.isArray() )
                         {
                                 id = null_variant;
-                                variant_hash_find(myht, (char*)"id", id);
+                                variant_hash_find(myht, IDSTRING, id);
                                 htRows = rows;
                                 htColumns = columns;
                                 nColumns = util_array_num_elements(htColumns);
@@ -2187,39 +2158,42 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                         amf0_write_string(buf,"id",AMF_STRING_AS_SAFE_TEXT,var_hash );
                                         if(id != null_variant)
                                         {
-						if (id.getType() == KindOfArray) {
-							Variant *p = NULL;
-							void * objIndex=NULL;
-							if (myht.getType() == KindOfArray) {
-								p = myht.toArray().lvalPtr("id",false, false);
-								amf0_serialize_var(buf, *p, var_hash );
-							} else if (myht.getType() == KindOfObject) {
-								Array odata = Array::Create();
-								Variant typeinfo,offsetinfo;
-								myht.getObjectData()->o_toArray_withInfo(&odata,true);
-							 	String realKey("id");
-								DataType retType;
-								if (odata.exists(realKey)) {
-									Array typedata = odata[realKey];
-									typeinfo = typedata["type"];
-									offsetinfo = typedata["offset"];
-								} else {
-									// this is a dynamic member
-									typeinfo = (int)KindOfVariant;
-									offsetinfo = 0;
-								}
-								if (typeinfo.toInt64() == (int)KindOfVariant) {
-								p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName());
-								amf0_serialize_var(buf, *p, var_hash );
-								} else {
-								objIndex = (char *)(myht.getObjectData()) + offsetinfo.toInt64();
-								amf0_serialize_var(buf, id , var_hash, objIndex);
-								}
+					
+						Variant *p = NULL;
+						if (myht.getType() == KindOfArray) {
+							p = myht.toArray().lvalPtr("id",false, false);
+							if (p && p->getRawType() == KindOfVariant) {
+							    amf0_serialize_var(buf, *p, var_hash );
 							} else {
-								raise_error("Invalid arraytype found during serialize");
+							    amf0_serialize_var(buf, id, var_hash );
+							}
+						} else if (myht.getType() == KindOfObject) {
+							Array odata = Array::Create();
+							Variant typeinfo,offsetinfo;
+							myht.getObjectData()->o_toArray_withInfo(&odata,true);
+							String realKey("id");
+							DataType retType;
+							if (odata.exists(realKey)) {
+								Array typedata = odata[realKey];
+								typeinfo = typedata["type"];
+								offsetinfo = typedata["offset"];
+							} else {
+								// this is a dynamic member
+								typeinfo = (int)KindOfVariant;
+								offsetinfo = 0;
+							}
+							if (typeinfo.toInt64() == (int)KindOfVariant) {
+							p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName());
+							if (p && p->getRawType() == KindOfVariant) {
+								amf0_serialize_var(buf, *p, var_hash );
+							} else {
+								amf0_serialize_var(buf, id, var_hash );
+							}
+							} else {
+							amf0_serialize_var(buf, id , var_hash);
 							}
 						} else {
-							amf0_serialize_var(buf, id, var_hash );
+							raise_error("Invalid arraytype found during serialize");
 						}
                                         }
                                         else
@@ -2232,10 +2206,12 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                         amf0_write_int(buf, nColumns );
                                         {
                                                 int iColumn;
+						Variant columnName;
+						Variant iColumnVar;
                                                 for(iColumn = 0; iColumn < nColumns; iColumn++)
                                                 {
-                                                        Variant columnName;
-                                                        variant_hash_find(htColumns, iColumn,columnName);
+							iColumnVar = iColumn;
+                                                        variant_hash_find(htColumns, iColumnVar,columnName);
                                                         if(!columnName.isString())
                                                         {
                                                                 amf0_serialize_string(buf,"unk",AMF_STRING_AS_SAFE_TEXT,var_hash );
@@ -2290,12 +2266,11 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                                 }
                                                                 else
                                                                 {
-									if (var.getType() == KindOfArray) {
-
 									Variant *p = htRow.toArray().lvalPtr(keyIndex,false, false);
-                                                                        amf0_serialize_var(buf, *p, var_hash );
+									if (p && p->getRawType() == KindOfVariant) {
+                                                                           amf0_serialize_var(buf, *p, var_hash );
 									} else {
-                                                                        amf0_serialize_var(buf, var, var_hash );
+                                                                           amf0_serialize_var(buf, var, var_hash );
 									}
                                                                 }
                                                                 iColumn++;
@@ -2364,18 +2339,19 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                         amf0_write_int(buf,num_count );
 
                          /*  lookup the key if existent (use 0x6 undefined */
+			Variant iIndexVar;
                         for(iIndex = 0; iIndex < (int)num_count; iIndex++)
                         {
-                                Variant zzValue;
-                                if(variant_hash_find(myht, iIndex,zzValue) == FAILURE)
+                                Variant zzValue;// = amf_get_holder(var_hash);
+				iIndexVar = iIndex;
+                                if(variant_hash_find(myht, iIndexVar ,zzValue) == FAILURE)
                                 {
                                         amf_write_byte(buf, AMF0_UNDEFINED);
                                 }
                                 else
                                 {
-					if (zzValue.getType() == KindOfArray) {
-						// Fixme relookup
-						Variant *p = myht.toArray().lvalPtr(iIndex,false, false);
+					Variant *p = myht.toArray().lvalPtr(iIndex,false, false);
+					if (p && p->getRawType() == KindOfVariant) {
 						amf0_serialize_var(buf, *p, var_hash );
 					} else {
 						amf0_serialize_var(buf, zzValue, var_hash );
@@ -2894,8 +2870,8 @@ static int amf_read_objectdata(Variant& rval, const unsigned char **p, const uns
         amf_put_in_cache(&(var_hash->objects0),rval);
         while(1)
         {
-                Variant &zName = *(NEW(Variant)());
-                Variant &zValue = *(NEW(Variant)());
+                Variant &zName = amf_get_holder(var_hash);
+                Variant &zValue = amf_get_holder(var_hash);
                 //zValue = Object(SystemLib::AllocStdClassObject());
                 if(amf0_read_string(zName,p,max,2,AMF_STRING_AS_TEXT,var_hash ) == FAILURE)
                 {
@@ -3065,7 +3041,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
 
                         while(1)
                         {
-                                Variant &zKey=*(NEW(Variant)()),  &zValue=*(NEW(Variant)());
+                                Variant &zKey=amf_get_holder(var_hash),  &zValue=amf_get_holder(var_hash);
                                 char * pEndOfString;
                                 char tmp[32];
                                 unsigned int keyLength;
@@ -3115,7 +3091,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 }
                                 else
                                 {
-                                        Variant &zValue=*(NEW(Variant)());
+                                        Variant &zValue=amf_get_holder(var_hash);
                                         if(amf3_unserialize_var(zValue,p,max,var_hash ) == FAILURE)
                                         {
                                                 amf_error_docref(NULL , E_WARNING, "amf cannot unserialize array item %d", iIndex);
@@ -3145,7 +3121,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                         int bTypedObject;
                         int iDynamicObject;
                         int iExternalizable;
-                        Variant  &zClassDef=*(NEW(Variant)()),&zClassname =*(NEW(Variant)(null_variant));
+                        Variant  &zClassDef=amf_get_holder(var_hash),&zClassname = amf_get_holder(var_hash);
                         int iMember;
                         int bIsArray = 0;
                         int iSuccess = FAILURE;
@@ -3156,6 +3132,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                         {
                                 Variant htClassDef;
                                 Variant tmp;
+				const Variant ONEINT=1;
                                 int iClassDef = (handle >> AMF_CLASS_SHIFT);
                                 if(amf_get_from_cache(&(var_hash->classes),zClassDef,iClassDef) == FAILURE)
                                 {
@@ -3171,7 +3148,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 iExternalizable = handle & AMF_CLASS_EXTERNAL;
                                 iDynamicObject = handle & AMF_CLASS_DYNAMIC;
 
-                                if (variant_hash_find(htClassDef, 1,tmp) == SUCCESS)
+                                if (variant_hash_find(htClassDef, ONEINT,tmp) == SUCCESS)
                                 {
                                         zClassname = tmp;
                                 }
@@ -3198,7 +3175,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                  /*  loop over classMemberCoun */
                                 for(iMember = 0; iMember < nClassMemberCount; iMember++)
                                 {
-                                        Variant &zMemberName = *(NEW(Variant)());
+                                        Variant &zMemberName = amf_get_holder(var_hash);
                                         if(amf3_read_string(zMemberName,p,max,1,AMF_STRING_AS_TEXT,var_hash ) == FAILURE)
                                         {
                                                 break;
@@ -3280,7 +3257,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 amf_put_in_cache(&(var_hash->objects),rval);
                                 for(iMember = 0; iMember < nClassMemberCount;iMember++)
                                 {
-                                        Variant &pzName=*(NEW(Variant)()), &zValue=*(NEW(Variant)());
+                                        Variant &pzName=amf_get_holder(var_hash), &zValue=amf_get_holder(var_hash);
                                         pzName =  null_variant;
                                         zValue = null_variant;
                                         if(hash_index_find(zClassDef,iMember+2,pzName) == FAILURE)
@@ -3308,8 +3285,8 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 {
                                         while(1)
                                         {
-                                                Variant &zKey = *(NEW(Variant)(null_variant));
-                                                Variant &zValue = *(NEW(Variant)(null_variant));
+                                                Variant &zKey = amf_get_holder(var_hash);
+                                                Variant &zValue = amf_get_holder(var_hash);
                                                 if(amf3_read_string(zKey,p,max,1,AMF_STRING_AS_TEXT,var_hash ) == FAILURE)
                                                 {
                                                         amf_error_docref(NULL , E_WARNING, "amf cannot understand key name %X","");
@@ -3479,7 +3456,7 @@ PRINT("amf_var_unserialize amf0 array");
                                 }
                                 else
                                 {
-                                        Variant& zValue=*(NEW(Variant)());
+                                        Variant& zValue=amf_get_holder(var_hash);
                                         if(amf_var_unserialize(zValue,p,max, var_hash ) == FAILURE)
                                         {
                                                 amf_error_docref(NULL , E_WARNING, "amf bad unserialized value for array index %d",iIndex);
@@ -3667,7 +3644,7 @@ Variant f_amf_decode(CStrRef var, CVarRef flag /* = null */, CVarRef offsetParam
 
                 unsigned char *p = (unsigned char*)var.data()+offset;
 
-                Variant&  tmp=*(NEW(Variant)());
+                Variant  tmp;
 
 
                 AMF_UNSERIALIZE_CTOR(var_hash,(Variant&)callback)

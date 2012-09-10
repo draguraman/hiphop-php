@@ -561,9 +561,9 @@ int IGBinarySerializer::igbinary_serialize_array(
 		Variant *p = NULL;
 		Variant tmp;
 		//get the real property name for private members
-		String realKey = key.toString().lastToken((char)0);
 		DataType retType;
 		if (z.getType() == KindOfObject) {
+		String realKey = key.toString().lastToken((char)0);
 		Variant typeinfo,offsetinfo;
 		if (odata.exists(realKey)) {
 		Array typedata = odata[realKey];
@@ -576,7 +576,7 @@ int IGBinarySerializer::igbinary_serialize_array(
 		}
 		if (typeinfo.toInt64() == (int)KindOfVariant) { 
 		p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,clsInfo->getName());
-		if (p->getRawType() == KindOfVariant) {
+		if (p && p->getRawType() == KindOfVariant) {
 			CVarRef pass = *p;
 			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
 			  return 1;
@@ -729,9 +729,9 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
 		Variant *p = NULL;
 		Variant tmp;
 		//get the real property name for private members
-		String realKey = key.toString().lastToken((char)0);
 		DataType retType;
 		if (z.getType() == KindOfObject) {
+		String realKey = key.toString().lastToken((char)0);
 		Variant typeinfo,offsetinfo;
 		if (odata.exists(realKey)) {
 		Array typedata = odata[realKey];
