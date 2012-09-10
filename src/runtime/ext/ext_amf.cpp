@@ -307,7 +307,7 @@ struct __amf_serialize_data_t__
         HashTable objects;   /*  stack of objects for AMF3, no reference */
         HashTable strings;   /*  stack of strings for AMF3: string key => inde */
         HashTable classes;       /*  stack of classes for AMF3, allocate */
-        std::vector<Variant> variantHolder;
+        std::list<Variant> variantHolder;
         Variant  callbackTarget;
         Variant  callbackFx;
         Variant  zEmpty_string;

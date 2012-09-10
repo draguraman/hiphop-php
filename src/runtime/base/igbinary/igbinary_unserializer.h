@@ -58,7 +58,7 @@ class IGBinaryUnserializer {
       size_t strings_capacity; /**< Unserialized string array capacity. */
 
       std::vector<Variant*> m_refs;
-      std::vector<Variant> holderVariants;
+      std::list<Variant> holderVariants;
 //      void **references; /**< Unserialized Arrays/Objects. */
 //      size_t references_count; /**< Unserialized array/objects count. */
 //      size_t references_capacity; /**< Unserialized array/object array capacity. */
