@@ -701,34 +701,36 @@ Variant *ObjectData::RealPropPublicHelper(
         if (cpt->m_size_mask >= 0) {
           const int *ix = cpt->m_hash_entries;
           int h = hash & cpt->m_size_mask;
-          int o = ix[h];
-          if (o >= 0) {
-            const ClassPropTableEntry *prop = cpt->m_entries + o;
-            do {
-              if (!prop->isPrivate() &&
-                  !prop->isOverride() &&
-                  hash == prop->hash &&
-                  LIKELY(!strcmp(prop->keyName->data(),
-                                 propName->data()))) {
-                const char *addr = ((const char *)obj) + prop->offset;
-                if (LIKELY(prop->type == KindOfVariant)) {
-                  return (Variant*)addr;
-                }
-                if (flags & (RealPropCreate|RealPropWrite)) break;
-                if (LIKELY(!globals)) globals = (char*)get_global_variables();
-                Variant *res = &((Globals*)globals)->__realPropProxy;
-                *res = prop->getVariant(addr);
-                return res;
-              }
-            } while (!prop++->isLast());
-          }
-        }
-        cpt = cpt->m_parent;
+	  int o = ix[h];
+	  if (o >= 0) {
+		  const ClassPropTableEntry *prop = cpt->m_entries + o;
+		  do {
+			  if (prop->isPrivate() && hash == prop->hash && strcmp(prop->keyName->data(), propName->data()))
+				  return NULL;
+			  if (!prop->isPrivate() &&
+					  !prop->isOverride() &&
+					  hash == prop->hash &&
+					  LIKELY(!strcmp(prop->keyName->data(),
+							  propName->data()))) {
+				  const char *addr = ((const char *)obj) + prop->offset;
+				  if (LIKELY(prop->type == KindOfVariant)) {
+					  return (Variant*)addr;
+				  }
+				  if (flags & (RealPropCreate|RealPropWrite)) break;
+				  if (LIKELY(!globals)) globals = (char*)get_global_variables();
+				  Variant *res = &((Globals*)globals)->__realPropProxy;
+				  *res = prop->getVariant(addr);
+				  return res;
+			  }
+		  } while (!prop++->isLast());
+	  }
+	}
+	cpt = cpt->m_parent;
       } while (cpt);
     }
     if (LIKELY(!osc->redeclaredParent)) break;
     if (LIKELY(!globals)) {
-      globals = (char*)get_global_variables();
+	    globals = (char*)get_global_variables();
     }
     osc = *(ObjectStaticCallbacks**)(globals + osc->redeclaredParent);
     obj = obj->getRedeclaredParent();
@@ -1535,7 +1537,8 @@ Variant ObjectData::o_getError(CStrRef prop, CStrRef context) {
 }
 
 Variant ObjectData::o_setError(CStrRef prop, CStrRef context) {
-  return null;
+	raise_error("Cannot access private property: %s::$%s", o_getClassName().data(),prop.data());
+	return null;
 }
 
 bool ObjectData::o_isset(CStrRef prop, CStrRef context) {
