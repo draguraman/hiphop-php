@@ -1147,7 +1147,7 @@ static int amf_perform_serialize_callback(const Variant& struc, Variant& classNa
                                             resultType = rresultValue.rvalAt(1);
 					}
 					if (rresultValue.toArray().exists(2)) {
-                                            className = rresultValue.rvalAt(1);
+                                            className = rresultValue.rvalAt(2);
 					    classNameLen = className.toString().length();
 					}
 /*
