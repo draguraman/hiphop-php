@@ -1122,7 +1122,7 @@ static int amf_perform_serialize_callback_event(int ievent, const Variant& arg0,
  *  \param className is the resulting class name of the class of the object
  *  \return
 */
-static int amf_perform_serialize_callback(const Variant& struc, const char **className, int * classNameLen,
+static int amf_perform_serialize_callback(const Variant& struc, Variant& className, int &classNameLen,
                                                                         Variant& resultValue, amf_serialize_data_t * var_hash )
 {
         int resultType = AMFC_TYPEDOBJECT;
@@ -1140,7 +1140,16 @@ static int amf_perform_serialize_callback(const Variant& struc, const char **cla
                                 Variant tmp;
                                 if(rresultValue.toArray().length()>0)
                                 {
-                                        resultValue = rresultValue.rvalAt(0);
+					if (rresultValue.toArray().exists(0)) {
+                                            resultValue = rresultValue.rvalAt(0);
+					}
+					if (rresultValue.toArray().exists(1)) {
+                                            resultType = rresultValue.rvalAt(1);
+					}
+					if (rresultValue.toArray().exists(2)) {
+                                            className = rresultValue.rvalAt(1);
+					    classNameLen = className.toString().length();
+					}
 /*
                                         if(zend_hash_index_find(ht, 1,(void**)&tmp) == SUCCESS)
                                         {
@@ -1163,8 +1172,8 @@ static int amf_perform_serialize_callback(const Variant& struc, const char **cla
 /*  AMF3 object */
 static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc, amf_serialize_data_t*var_hash )
 {
-        const char * className = struc.isResource()? "" : struc.toObject().objectForCall()->o_getClassName();
-        int classNameLen = strlen(className);
+        Variant className = struc.isResource()? "" : struc.toObject().objectForCall()->o_getClassName();
+        int classNameLen = className.toString().length();
         ulong objectIndex;
 
          /*  if the object is already in cache then just go for i */
@@ -1173,14 +1182,14 @@ static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc,
                 amf3_write_objecthead(buf, (objectIndex << 1) );
                 return;
         }
-        if(strcmp(className, "stdclass") == 0)  /*  never for resource */
+        if(className == "stdclass")  /*  never for resource */
                 amf3_serialize_object_default(buf, struc, "",0,var_hash );
         else
         {
                 int resultType = AMFC_TYPEDOBJECT;
                 Variant resultValue = struc;
 
-                resultType = amf_perform_serialize_callback(struc, &className,&classNameLen,resultValue,var_hash );
+                resultType = amf_perform_serialize_callback(struc, className,classNameLen,resultValue,var_hash );
 
                 if(resultValue.isResource() )
                 {
@@ -1259,11 +1268,11 @@ static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc,
                         }
                         else if(resultValue.isObject())
                         {
-                                amf3_serialize_object_default(buf, resultValue,className,classNameLen, var_hash );
+                                amf3_serialize_object_default(buf, resultValue,className.toString().data(),classNameLen, var_hash );
                         }
                         else if(resultValue.isArray())
                         {
-                                amf3_serialize_object_default(buf, resultValue, className,classNameLen,var_hash );
+                                amf3_serialize_object_default(buf, resultValue, className.toString().data(),classNameLen,var_hash );
                         }
                         else
                         {
@@ -1397,8 +1406,8 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 */
 static void amf0_serialize_object(amf_serialize_output buf, const Variant& struc, amf_serialize_data_t*var_hash )
 {
-        const char * className = struc.isResource() ? "" : struc.toObject().objectForCall()->o_getClassName();
-        int classNameLen = strlen(className);
+        Variant className = struc.isResource() ? "" : struc.toObject().objectForCall()->o_getClassName();
+        int classNameLen = className.toString().length();
         ulong objectIndex;
 
          /*  if the object is already in cache then just go for i */
@@ -1408,7 +1417,7 @@ static void amf0_serialize_object(amf_serialize_output buf, const Variant& struc
                 amf0_write_short(buf, objectIndex );
                 return;
         }
-        if(strcmp(className, "stdclass") == 0)
+        if(className == "stdclass")
         {
                 amf_write_byte(buf,AMF0_OBJECT);
                 amf0_serialize_objectdata(buf, struc, 0, var_hash );
@@ -1419,7 +1428,7 @@ static void amf0_serialize_object(amf_serialize_output buf, const Variant& struc
                 int resultValueLength = 0;
                 Variant resultValue = struc;
 
-                resultType = amf_perform_serialize_callback(struc, &className,&classNameLen,resultValue,var_hash );
+                resultType = amf_perform_serialize_callback(struc, className,classNameLen,resultValue,var_hash );
 
                 if(resultValue.isResource())
                 {
@@ -1491,12 +1500,12 @@ static void amf0_serialize_object(amf_serialize_output buf, const Variant& struc
                                 amf_write_byte(buf,AMF0_TYPEDOBJECT);
                                 if(resultValue.isObject() )
                                 {
-                                        amf0_write_string(buf,className,AMF_STRING_AS_TEXT,var_hash );
+                                        amf0_write_string(buf,className.toString().data(),AMF_STRING_AS_TEXT,var_hash );
                                         amf0_serialize_objectdata(buf, resultValue, 0, var_hash );
                                 }
                                 else
                                 {
-                                        amf0_write_string(buf, className,AMF_STRING_AS_TEXT,var_hash  );
+                                        amf0_write_string(buf, className.toString().data(),AMF_STRING_AS_TEXT,var_hash  );
                                         amf0_serialize_objectdata(buf, resultValue, 0,var_hash );
                                 }
                         }
