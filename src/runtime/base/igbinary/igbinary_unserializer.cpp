@@ -577,7 +577,6 @@ int IGBinaryUnserializer::igbinary_unserialize_array(
       }
 
       Object obj = z.toObjRef();
-      CStrRef clsName = obj->o_getClassName();
 
       CStrRef skey = key.toCStrRef();
       int subLen = 0;
@@ -592,32 +591,28 @@ int IGBinaryUnserializer::igbinary_unserialize_array(
         }
       }
 
+      // turn off UseGet
+      AttributeClearer a (ObjectData::UseGet,(ObjectData*)&obj);
       Variant tmp;
       DataType myType;
-      void* valuePtr =
-          subLen != 0 ?
-              (skey.charAt(1) == '*' ?
-                  obj->o_lvalptr(skey.substr(subLen), tmp, &myType, clsName) :
-                  obj->o_lvalptr(skey.substr(subLen), tmp, &myType,
-                      String(skey.data() + 1, subLen - 2, AttachLiteral)))
-                      :
-              obj->o_lvalptr(skey, tmp, &myType);
+      bool isPrivate = key.toString().charAt(0) == '0';
+      String realKey = key.toString().lastToken((char)0);
+      void *valuePtr = NULL;
+      if (isPrivate) {
+          valuePtr = obj->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite|ObjectData::RealPropCreate|ObjectData::RealPropNoDynamic, &myType, false,obj->o_getClassName());
+	  if (!valuePtr) {
+		raise_error("Failed to find private member %s in object %s",
+				realKey.data(),obj->o_getClassName().data());
+	  }
+       } else {
+          valuePtr = obj->o_realPropPtr(realKey, ObjectData::RealPropNoPrivCheck|ObjectData::RealPropWrite|ObjectData::RealPropCreate, &myType, false,obj->o_getClassName());
+	if (!valuePtr) {
+		raise_error("Failed to find/create public member %s in object %s",
+				realKey.data(),obj->o_getClassName().data());
+	}
+       }
 
-      if (!valuePtr) {
-        Variant& value =
-            subLen != 0 ?
-                (skey.charAt(1) == '*' ?
-                    obj->o_lval(skey.substr(subLen), tmp, clsName) :
-                    obj->o_lval(skey.substr(subLen), tmp,
-                        String(skey.data() + 1, subLen - 2, AttachLiteral)))
-                        :
-                obj->o_lval(skey, tmp);
-        //value.unserialize(uns);
-        if( igbinary_unserialize_zval(igsd, value TSRMLS_CC) ) {
-          raise_warning("igbinary_unserialize_zval() returned 1");
-          return 1;
-        }
-      } else if (myType != KindOfVariant) {
+     if (myType != KindOfVariant) {
         if (myType == KindOfArray) {
           Array& myArr = *(Array*) valuePtr;
           Variant &value = getHolderVariant(igsd);

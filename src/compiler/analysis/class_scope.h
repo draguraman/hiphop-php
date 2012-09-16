@@ -507,6 +507,8 @@ public:
 
   typedef std::map<std::string, ClassPropTableInfo>
     ClassPropTableMap;
+
+  ClassScopePtr getNextParentWithProp(AnalysisResultPtr ar);
 protected:
   void findJumpTableMethods(CodeGenerator &cg, AnalysisResultPtr ar,
                             bool staticOnly, std::vector<const char *> &funcs);
@@ -626,7 +628,6 @@ private:
       const StringToFunctionScopePtrMap &funcScopes, bool fewArgs);
   hphp_const_char_imap<int> m_implemented;
 
-  ClassScopePtr getNextParentWithProp(AnalysisResultPtr ar);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

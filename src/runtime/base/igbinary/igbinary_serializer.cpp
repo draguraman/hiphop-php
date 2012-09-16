@@ -402,9 +402,9 @@ void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data 
       if (a & ClassInfo::IsProtected) {
         std::vector<uint8_t> buf;
 
-        buf.push_back('\0');
+        /*buf.push_back('\0');
         buf.push_back('*');
-        buf.push_back('\0');
+        buf.push_back('\0');*/
         append(buf, prop.data(), prop.size());
 
         igbinary_serialize_string(igsd, (const char*)buf.data(), buf.size());
@@ -415,9 +415,9 @@ void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data 
         const char *clsname = dcls->getName();
         int clsLen = strlen(clsname);
 
-        buf.push_back('\0');
+        /*buf.push_back('\0');
         append(buf, clsname, clsLen);
-        buf.push_back('\0');
+        buf.push_back('\0');*/
         append(buf, prop.data(), prop.size());
 
         igbinary_serialize_string(igsd, (const char*)buf.data(), buf.size());
@@ -493,7 +493,7 @@ int IGBinarySerializer::igbinary_serialize_array(
 
   Array odata=Array::Create();
   bool object = clsInfo != NULL;
-  CArrRef h = object ? (z.getObjectData()->o_toArray_withInfo(&odata)) : z.toCArrRef();
+  CArrRef h = object ? (z.getObjectData()->o_toArray_forSer(&odata)) : z.toCArrRef();
 
   /* hash size */
   n = h.size();
@@ -560,13 +560,14 @@ int IGBinarySerializer::igbinary_serialize_array(
 		{
 		Variant *p = NULL;
 		Variant tmp;
+ 		bool isPrivate = (key.toString().charAt(0) == '\0');
 		//get the real property name for private members
 		DataType retType;
 		if (z.getType() == KindOfObject) {
 		String realKey = key.toString().lastToken((char)0);
 		Variant typeinfo,offsetinfo;
-		if (odata.exists(realKey)) {
-		Array typedata = odata[realKey];
+		if (odata.exists(key)) {
+		Array typedata = odata[key];
 		typeinfo = typedata["type"];
 		offsetinfo = typedata["offset"];
 		} else {
@@ -575,8 +576,12 @@ int IGBinarySerializer::igbinary_serialize_array(
 			offsetinfo = 0;
 		}
 		if (typeinfo.toInt64() == (int)KindOfVariant) { 
-		p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,clsInfo->getName());
-		if (p && p->getRawType() == KindOfVariant) {
+		if (isPrivate) {
+		    p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck|ObjectData::RealPropNoDynamic, &retType, false,clsInfo->getName());
+		} else {
+		    p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck, &retType, false,clsInfo->getName());
+		}
+		    if (p && p->getRawType() == KindOfVariant) {
 			CVarRef pass = *p;
 			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
 			  return 1;

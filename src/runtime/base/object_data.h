@@ -77,6 +77,7 @@ class ObjectData : public CountableNF {
     RealPropWrite = 2,    // Property could be modified
     RealPropNoDynamic = 4,// Dont return dynamic properties
     RealPropUnchecked = 8,// Dont check property accessibility
+    RealPropNoPrivCheck = 16,
   };
   virtual bool customSerializer() const {
 	return false;
@@ -181,6 +182,7 @@ class ObjectData : public CountableNF {
   // properties
   virtual Array o_toArray() const;
   virtual Array o_toArray_withInfo(Array* p, bool pubOnly = false) const;
+  virtual Array o_toArray_forSer(Array* p, bool pubOnly = false) const;
   virtual Array o_toIterArray(CStrRef context, bool getRef = false);
   virtual Array o_getDynamicProperties() const;
   void *o_realPropPtr(CStrRef propName, int flags, DataType *retType, bool forceVariant,

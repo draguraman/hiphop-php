@@ -250,6 +250,8 @@ public:
                              std::vector<String> *clsProperties,
                              std::vector<String> *clsConstants);
 
+  static void GetArray_forSer(const ObjectData *obj, const ClassPropTable *ct,
+                       Array &props, bool pubOnly, Array* odata = NULL);
   static void GetArray(const ObjectData *obj, const ClassPropTable *ct,
                        Array &props, bool pubOnly, Array* odata = NULL);
   static void SetArray(ObjectData *obj, const ClassPropTable *ct, CArrRef props);
@@ -485,6 +487,7 @@ struct ClassPropTableEntry {
   StaticString *keyName;
   bool isPublic() const { return flags & Public; }
   bool isPrivate() const { return flags & Private; }
+  bool isProtected() const { return flags & Protected; }
   bool isOverride() const { return flags & Override; }
   bool isStatic() const { return flags & Static; }
   bool isConstant() const { return flags & Constant; }

@@ -65,9 +65,9 @@ bool ObjectPropertyExpression::isTemporary() const {
 }
 
 bool ObjectPropertyExpression::isNonPrivate(AnalysisResultPtr ar) {
-  // To tell whether a property is declared as private in the context
+  // To tell whether a property is declared as private  or protected in the context
   ClassScopePtr cls = getOriginalClass();
-  if (!cls || !cls->getVariables()->hasNonStaticPrivate()) return true;
+  if (!cls) return true;
   if (m_property->getKindOf() != Expression::KindOfScalarExpression) {
     return false;
   }
@@ -75,7 +75,26 @@ bool ObjectPropertyExpression::isNonPrivate(AnalysisResultPtr ar) {
     dynamic_pointer_cast<ScalarExpression>(m_property);
   string propName = name->getString();
   Symbol *sym = cls->getVariables()->getSymbol(propName);
-  if (!sym || sym->isStatic() || !sym->isPrivate()) return true;
+  bool inherited = false;
+  if (!sym) {
+	ClassScopePtr pcls;
+	pcls = cls->getNextParentWithProp(ar);
+	while (pcls) {
+		sym = pcls->getVariables()->getSymbol(propName);
+		if (sym) {
+			inherited = true;
+			break;
+		}
+		pcls = pcls->getNextParentWithProp(ar);
+ 	}
+	if (!pcls && !sym) {
+		return true;
+	}
+  }
+  if (!sym || sym->isStatic() || !(((!inherited) && sym->isPrivate()) || sym->isProtected())) {
+	return true;
+  }
+  
   return false;
 }
 

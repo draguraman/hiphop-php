@@ -705,9 +705,12 @@ Variant *ObjectData::RealPropPublicHelper(
 	  if (o >= 0) {
 		  const ClassPropTableEntry *prop = cpt->m_entries + o;
 		  do {
-			  if (prop->isPrivate() && hash == prop->hash && strcmp(prop->keyName->data(), propName->data()))
+			  if ((!(flags& RealPropUnchecked) && !prop->isPublic()) && hash == prop->hash && !strcmp(prop->keyName->data(), propName->data())) {
+				 if (!(flags & RealPropNoPrivCheck)) {
 				  return NULL;
-			  if (!prop->isPrivate() &&
+				 }
+			  }
+			  if ((flags& RealPropUnchecked ||prop->isPublic()) &&
 					  !prop->isOverride() &&
 					  hash == prop->hash &&
 					  LIKELY(!strcmp(prop->keyName->data(),
@@ -952,7 +955,7 @@ inline ALWAYS_INLINE Variant ObjectData::o_setImpl(CStrRef propName, T v,
 }
 
 Variant ObjectData::o_set(CStrRef propName, CVarRef v) {
-  return o_setImpl<CVarRef>(propName, v, false, null_string);
+  return o_setImpl<CVarRef>(propName, v, true, null_string);
 }
 
 Variant ObjectData::o_set(CStrRef propName, RefResult v) {
@@ -960,11 +963,11 @@ Variant ObjectData::o_set(CStrRef propName, RefResult v) {
 }
 
 Variant ObjectData::o_setRef(CStrRef propName, CVarRef v) {
-  return o_setImpl<RefResult>(propName, ref(v), false, null_string);
+  return o_setImpl<RefResult>(propName, ref(v), true, null_string);
 }
 
 Variant ObjectData::o_set(CStrRef propName, CVarRef v, CStrRef context) {
-  return o_setImpl<CVarRef>(propName, v, false, context);
+  return o_setImpl<CVarRef>(propName, v, true, context);
 }
 
 Variant ObjectData::o_set(CStrRef propName, RefResult v, CStrRef context) {
@@ -972,7 +975,7 @@ Variant ObjectData::o_set(CStrRef propName, RefResult v, CStrRef context) {
 }
 
 Variant ObjectData::o_setRef(CStrRef propName, CVarRef v, CStrRef context) {
-  return o_setImpl<RefResult>(propName, ref(v), false, context);
+  return o_setImpl<RefResult>(propName, ref(v), true, context);
 }
 
 template<typename T>
@@ -1159,6 +1162,12 @@ Variant *ObjectData::o_weakLval(CStrRef propName,
   return NULL;
 }
 
+Array ObjectData::o_toArray_forSer(Array *p, bool pubOnly) const {
+  Array ret(ArrayData::Create());
+  ObjectData *root = const_cast<ObjectData*>(this)->getRoot();
+  ClassInfo::GetArray_forSer(root, root->o_getClassPropTable(), ret, pubOnly,p);
+  return ret;
+}
 Array ObjectData::o_toArray_withInfo(Array *p, bool pubOnly) const {
   Array ret(ArrayData::Create());
   ObjectData *root = const_cast<ObjectData*>(this)->getRoot();
@@ -1579,7 +1588,7 @@ void ObjectData::o_unset(CStrRef prop, CStrRef context) {
     t___unset(prop);
   } else {
     if (Variant *t = o_realProp(prop,
-                                RealPropWrite|RealPropNoDynamic, context)) {
+                                RealPropUnchecked|RealPropWrite|RealPropNoDynamic, context)) {
       unset(*t);
     } else if (o_properties.exists(prop, true)) {
       o_properties.weakRemove(prop, true);
