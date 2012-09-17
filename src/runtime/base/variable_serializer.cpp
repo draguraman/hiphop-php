@@ -627,9 +627,9 @@ void VariableSerializer::writeSerializedProperty(CStrRef prop,
       ClassInfo::Attribute a = p->attribute;
       if (a & ClassInfo::IsProtected) {
         m_buf->append("s:");
-        m_buf->append(prop.size() + 3);
+        m_buf->append(prop.size());
         m_buf->append(":\"");
-        m_buf->append("\0*\0", 3);
+        //m_buf->append("\0*\0", 3);
         m_buf->append(prop);
         m_buf->append("\";");
         return;
@@ -638,10 +638,10 @@ void VariableSerializer::writeSerializedProperty(CStrRef prop,
         int clsLen = strlen(clsname);
 
         m_buf->append("s:");
-        m_buf->append(prop.size() + clsLen + 2);
-        m_buf->append(":\"\0", 3);
-        m_buf->append(clsname, clsLen);
-        m_buf->append('\0');
+        m_buf->append(prop.size());
+        m_buf->append(":\"", 3);
+        //m_buf->append(clsname, clsLen);
+        //m_buf->append('\0');
         m_buf->append(prop);
         m_buf->append("\";");
         return;
@@ -668,9 +668,11 @@ void VariableSerializer::writeArrayKey(const ArrayData *arr, Variant key) {
       }
       int span = ks.find('\0', 1);
       ASSERT(span != String::npos);
+      if (ks.charAt(1) != '*') {
       String cl(ks.substr(1, span - 1));
       cls = ClassInfo::FindClass(cl);
       ASSERT(cls);
+      }
       key = ks.substr(span + 1);
     }
   }

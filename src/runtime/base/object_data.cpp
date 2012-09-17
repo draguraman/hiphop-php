@@ -895,7 +895,7 @@ inline Variant ObjectData::o_getImpl(CStrRef propName, int flags,
 
 Variant ObjectData::o_get(CStrRef propName, bool error /* = true */,
                           CStrRef context /* = null_string */) {
-  return o_getImpl(propName, 0, error, context);
+  return o_getImpl(propName, RealPropUnchecked, error, context);
 }
 
 Variant ObjectData::o_getPublic(CStrRef propName, bool error /* = true */) {
@@ -1376,6 +1376,7 @@ bool ObjectData::php_sleep(Variant &ret) {
 }
 
 StaticString s_zero("\0", 1);
+StaticString s_star("*", 1);
 
 void ObjectData::serialize(VariableSerializer *serializer) const {
   if (serializer->incNestedLevel((void*)this, true)) {
@@ -1407,13 +1408,24 @@ void ObjectData::serialize(VariableSerializer *serializer) const {
         for (ArrayIter iter(props); iter; ++iter) {
           String name = iter.second().toString();
           if (o_exists(name, o_getClassName())) {
-            ClassInfo::PropertyInfo *p = cls->getPropertyInfo(name);
-            String propName = name;
-            if (p && (p->attribute & ClassInfo::IsPrivate)) {
-              propName = concat4(s_zero, o_getClassName(), s_zero, name);
-            }
-            wanted.set(propName, const_cast<ObjectData*>(this)->
+	    // get the public dynamic properties first.
+	    const Array &parr = o_getDynamicProperties();
+	    String propName;
+	    if (parr.exists(name)) {
+		propName = name;
+                wanted.set(propName, parr.rvalAt(name,AccessFlags::Key));
+ 	    } else {
+                ClassInfo::PropertyInfo *p = cls->getPropertyInfo(name);
+                propName = name;
+                if (p && (p->attribute & ClassInfo::IsPrivate)) {
+                  propName = concat4(s_zero, o_getClassName(), s_zero, name);
+                } else if (p && (p->attribute & ClassInfo::IsProtected)) {
+                  propName = concat4(s_zero, s_star , s_zero, name);
+		}
+
+                wanted.set(propName, const_cast<ObjectData*>(this)->
                        o_getUnchecked(name, o_getClassName()));
+	    }
           } else {
             raise_warning("\"%s\" returned as member variable from "
                           "__sleep() but does not exist", name.data());
@@ -1447,7 +1459,7 @@ void ObjectData::serialize(VariableSerializer *serializer) const {
          customSerialize(serializer);
       } else {
          serializer->setObjectInfo(o_getClassName(), o_getId());
-         o_toArray().serialize(serializer, true);
+         o_toArray_forSer(NULL,false).serialize(serializer, true);
       }
     }
   }
@@ -1637,7 +1649,7 @@ Variant ObjectData::t___unset(Variant v_name) {
 }
 
 bool ObjectData::o_propExists(CStrRef s, CStrRef context /* = null_string */) {
-  Variant *t = o_realProp(s, 0, context);
+  Variant *t = o_realProp(s, RealPropUnchecked, context);
   return t && t->isInitialized();
 }
 

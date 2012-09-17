@@ -595,7 +595,7 @@ int IGBinaryUnserializer::igbinary_unserialize_array(
       AttributeClearer a (ObjectData::UseGet,(ObjectData*)&obj);
       Variant tmp;
       DataType myType;
-      bool isPrivate = key.toString().charAt(0) == '0';
+      bool isPrivate = key.toString().charAt(0) == '\0';
       String realKey = key.toString().lastToken((char)0);
       void *valuePtr = NULL;
       if (isPrivate) {

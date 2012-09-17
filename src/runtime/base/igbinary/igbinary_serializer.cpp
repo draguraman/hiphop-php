@@ -387,9 +387,9 @@ std::vector<uint8_t>& append(std::vector<uint8_t>& buf, const char* p, int len) 
   return buf;
 }
 
-void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data *igsd, CStrRef prop, const ClassInfo *cls) {
+void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data *igsd, CStrRef prop, const ClassInfo *cls, bool noPropCheck/*=false*/) {
   const ClassInfo *origCls = cls;
-  if (cls && (prop.size() > 0 && prop.charAt(0) != '\00') ) {
+  if (cls && (prop.size() > 0 && prop.charAt(0) != '\00') && !noPropCheck ) {
     ClassInfo::PropertyInfo *p = cls->getPropertyInfo(prop);
     // Try to find defining class
     while (!p && cls) {
@@ -397,7 +397,6 @@ void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data 
       if (cls) p = cls->getPropertyInfo(prop);
     }
     if (p) {
-      const ClassInfo *dcls = p->owner;
       ClassInfo::Attribute a = p->attribute;
       if (a & ClassInfo::IsProtected) {
         std::vector<uint8_t> buf;
@@ -411,9 +410,6 @@ void IGBinarySerializer::writeSerializedProperty(struct igbinary_serialize_data 
         return;
       } else if ((a & ClassInfo::IsPrivate) && cls == origCls) {
         std::vector<uint8_t> buf;
-
-        const char *clsname = dcls->getName();
-        int clsLen = strlen(clsname);
 
         /*buf.push_back('\0');
         append(buf, clsname, clsLen);
@@ -699,6 +695,7 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
 
   Array odata = Array::Create();
   z.getObjectData()->o_toArray_withInfo(&odata);
+  const Array &parr = const_cast<ObjectData*>(od)->o_getDynamicProperties();
   //Array wanted = Array::Create();
   for (ArrayIter iter(props); iter; ++iter) {
     CVarRef key= iter.second();
@@ -710,7 +707,6 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
     }
 
     String name = key.toString();
-    CVarRef val = const_cast<ObjectData*>(od)->o_getUnchecked(name, od->o_getClassName());
     if (!od->o_exists(name, od->o_getClassName())) {
       raise_warning("\"%s\" returned as member variable from "
                     "__sleep() but does not exist", name.data());
@@ -721,7 +717,14 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
       //TODO: what is it?
       continue;
     }
-
+    Variant val;
+    bool noPropCheck = true;
+    if (parr.exists(name)) {
+        val = parr.rvalAt(name,AccessFlags::Key);    
+    } else {
+        noPropCheck = false;
+        val = const_cast<ObjectData*>(od)->o_getUnchecked(name, od->o_getClassName());
+    }
     if (val.isNull()) {
       /* we should still add element even if it's not OK,
        * since we already wrote the length of the array before
@@ -729,7 +732,7 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
       igbinary_serialize_string(igsd, (const char*)name.data(), name.size());
       igbinary_serialize_null(igsd TSRMLS_CC);
     } else {
-        writeSerializedProperty(igsd, name, clsInfo);
+        writeSerializedProperty(igsd, name, clsInfo,noPropCheck);
 		{
 		Variant *p = NULL;
 		Variant tmp;

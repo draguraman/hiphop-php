@@ -94,7 +94,7 @@ private:
 
   static int igbinary_serialize_zval(struct igbinary_serialize_data *igsd, CVarRef z TSRMLS_DC, void * objIndex = NULL);
 
-  static void writeSerializedProperty(struct igbinary_serialize_data *igsd, CStrRef prop, const ClassInfo *cls);
+  static void writeSerializedProperty(struct igbinary_serialize_data *igsd, CStrRef prop, const ClassInfo *cls,bool noPropCheck = false);
 
   inline static void writeToBuffer(struct igbinary_serialize_data *igsd, uint8_t c);
   inline static void writeToBuffer(struct igbinary_serialize_data *igsd, const char* p);
