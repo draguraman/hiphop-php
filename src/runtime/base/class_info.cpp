@@ -624,6 +624,18 @@ ClassInfo::PropertyInfo *ClassInfo::getPropertyInfo(CStrRef name) const {
   if (iter != properties.end()) {
     return iter->second;
   }
+  const ClassInfo *parent = getParentClassInfo();
+  while (parent) {
+    const PropertyMap &inhproperties = parent->getProperties();
+    PropertyMap::const_iterator piter = inhproperties.find(name);
+    if (piter != inhproperties.end()) {
+      // parent properties are only available if NOT private
+      if (!(piter->second->attribute & ClassInfo::IsPrivate)) {
+	      return piter->second;
+      }
+    }
+    parent = parent->getParentClassInfo();
+  }
   return NULL;
 }
 
