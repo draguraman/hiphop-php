@@ -736,22 +736,29 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
 		{
 		Variant *p = NULL;
 		Variant tmp;
+		bool isPrivate = false;
 		//get the real property name for private members
 		DataType retType;
 		if (z.getType() == KindOfObject) {
 		String realKey = key.toString().lastToken((char)0);
+		isPrivate = (key.toString().charAt(0) == '\0');
 		Variant typeinfo,offsetinfo;
-		if (odata.exists(realKey)) {
-		Array typedata = odata[realKey];
-		typeinfo = typedata["type"];
-		offsetinfo = typedata["offset"];
+		if (odata.exists(key)) {
+			Array typedata = odata[key];
+			typeinfo = typedata["type"];
+			offsetinfo = typedata["offset"];
 		} else {
 			// this is a dynamic member
 			typeinfo = (int)KindOfVariant;
 			offsetinfo = 0;
 		}
 		if (typeinfo.toInt64() == (int)KindOfVariant) { 
-		p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,clsInfo->getName());
+                if (isPrivate) {
+                    p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck|ObjectData::RealPropNoDynamic, &retType, false,clsInfo->getName());
+                } else {
+                    p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck, &retType, false,clsInfo->getName());
+                }
+
 		if (p->getRawType() == KindOfVariant) {
 			CVarRef pass = *p;
 			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {

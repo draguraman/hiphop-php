@@ -994,7 +994,7 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
          /*  for(j = 0; j < memberCount; j++) fixed value */
          /*  iterate over all the key */
           Array odata = Array::Create();
-          CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata,true)); 
+          CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_forSer(&odata,true)); 
 
 	for (ArrayIter iter(h); iter; ++iter) {
 		Variant key(iter.first());
@@ -1034,8 +1034,9 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 			if (myht.getType() == KindOfObject) {
 			String realKey = key.toString().lastToken((char)0);
 			Variant typeinfo,offsetinfo;
-			if (odata.exists(realKey)) {
-				Array typedata = odata[realKey];
+			bool isPriv = (key.toString().charAt(0) == '\0');
+			if (odata.exists(key)) {
+				Array typedata = odata[key];
 				typeinfo = typedata["type"];
 				offsetinfo = typedata["offset"];
 			} else {
@@ -1044,7 +1045,13 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 				offsetinfo = 0;
 			}
 			if (typeinfo.toInt64() == (int)KindOfVariant) { 
-			p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName());
+			if (isPriv) {
+			/* a private or protected property */
+			p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite|ObjectData::RealPropNoDynamic, &retType, false,myht.getObjectData()->o_getClassName()); 
+			} else {
+			/* a public or dynamic property */
+			p = (Variant*)myht.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropNoPrivCheck|ObjectData::RealPropWrite, &retType, false,myht.getObjectData()->o_getClassName()); 
+			}
 			if (p && p->getRawType() == KindOfVariant) {
 				CVarRef pass = *p;
                                 amf3_serialize_var(buf, pass, var_hash);
@@ -1057,13 +1064,14 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 				} else {
 				   p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);	
 				}
+
+				if (p && p->getRawType() == KindOfVariant) {
+				    CVarRef pass = *p;
+				    amf3_serialize_var(buf, pass, var_hash);
+				    continue;
+				}
 			} else  {
 				raise_error("Invalid type of object seen in serialize array");
-			}
-			if (p && p->getRawType() == KindOfVariant) {
-			    CVarRef pass = *p;
-                            amf3_serialize_var(buf, pass, var_hash);
-			    continue;
 			}
 		} 
 		amf3_serialize_var(buf, (Variant&)val, var_hash );
@@ -1315,7 +1323,7 @@ static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc,
 static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z, int isArray, amf_serialize_data_t*var_hash )
 {
 	  Array odata = Array::Create();
-	  CArrRef h = isArray ? z.toCArrRef() : (z.getObjectData()->o_toArray_withInfo(&odata,true)); 
+	  CArrRef h = isArray ? z.toCArrRef() : (z.getObjectData()->o_toArray_forSer(&odata,true)); 
 
         for (ArrayIter iter(h); iter; ++iter) {
                 Variant key(iter.first());
@@ -1355,9 +1363,10 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 			DataType retType;
 			if (z.getType() == KindOfObject) {
 			String realKey = key.toString().lastToken((char)0);
+			bool isPriv = (key.toString().charAt(0) == '\0');
 			Variant typeinfo,offsetinfo;
-			if (odata.exists(realKey)) {
-				Array typedata = odata[realKey];
+			if (odata.exists(key)) {
+				Array typedata = odata[key];
 				typeinfo = typedata["type"];
 				offsetinfo = typedata["offset"];
 			} else {
@@ -1366,7 +1375,11 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 				offsetinfo = 0;
 			}
 			if (typeinfo.toInt64() == (int)KindOfVariant) { 
-			p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite, &retType, false,z.getObjectData()->o_getClassName());
+			if (isPriv) {
+			    p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropUnchecked|ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck|ObjectData::RealPropNoDynamic, &retType, false,z.getObjectData()->o_getClassName());
+			} else {
+			    p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck, &retType, false,z.getObjectData()->o_getClassName());
+			}
 			if (p && p->getRawType() == KindOfVariant) {
 			    CVarRef pass = *p;
                             amf0_serialize_var(buf, pass, var_hash );
@@ -1380,14 +1393,15 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 				} else {
 				   p = z.toArray().lvalPtr(key.asInt64Val(),false, false);	
 				}
+				if (p && p->getRawType() == KindOfVariant) {
+				    CVarRef pass = *p;
+				    amf0_serialize_var(buf, pass, var_hash );
+				    continue;
+				} 
 			} else  {
 				raise_error("Invalid type of object seen in serialize array");
 			}
-			if (p) {
-			    CVarRef pass = *p;
-                            amf0_serialize_var(buf, pass, var_hash );
-			    continue;
-			} 		
+		
 		} 
 		amf0_serialize_var(buf, val, var_hash );
         }
@@ -1672,7 +1686,7 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                 //uint key_len;
                 int rt;
 		Array odata = Array::Create();
-		CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_withInfo(&odata,true));
+		CArrRef h = myht.isArray() ? myht.toCArrRef() : (myht.getObjectData()->o_toArray_forSer(&odata,true));
 		const Variant ROWSTRING="rows";
 		const Variant COLSTRING="columns";
 
@@ -1879,8 +1893,8 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 						if (myht.getType() == KindOfObject) {
 						String realKey = key.toString().lastToken((char)0);
 						Variant typeinfo,offsetinfo;
-						if (odata.exists(realKey)) {
-							Array typedata = odata[realKey];
+						if (odata.exists(key)) {
+							Array typedata = odata[key];
 							typeinfo = typedata["type"];
 							offsetinfo = typedata["offset"];
 						} else {
@@ -1958,8 +1972,8 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 							if (myht.getType() == KindOfObject) {
 							String realKey = key.toString().lastToken((char)0);
 							Variant typeinfo,offsetinfo;
-							if (odata.exists(realKey)) {
-								Array typedata = odata[realKey];
+							if (odata.exists(key)) {
+								Array typedata = odata[key];
 								typeinfo = typedata["type"];
 								offsetinfo = typedata["offset"];
 							} else {
