@@ -1081,7 +1081,7 @@ void* ObjectData::o_lvalptr(CStrRef propName, CVarRef tmpForGet, DataType *retTy
   }
 
   bool useGet = getAttribute(UseGet);
-  int flags = useGet ? RealPropWrite : RealPropCreate | RealPropWrite;
+  int flags = useGet ? RealPropWrite | RealPropUnchecked : RealPropCreate | RealPropWrite | RealPropUnchecked;
   if (void *t = o_realPropPtr(propName, flags, retType, false, context)) {
     if (*retType == KindOfVariant) {
 	    if (!useGet||(*((Variant*)t)).isInitialized()) {
@@ -1125,7 +1125,7 @@ Variant &ObjectData::o_lval(CStrRef propName, CVarRef tmpForGet,
   }
 
   bool useGet = getAttribute(UseGet);
-  int flags = useGet ? RealPropWrite : RealPropCreate | RealPropWrite;
+  int flags = useGet ? RealPropWrite|RealPropUnchecked : RealPropCreate | RealPropWrite | RealPropUnchecked;
   if (Variant *t = o_realProp(propName, flags, context)) {
     if (!useGet || t->isInitialized()) {
       return *t;
