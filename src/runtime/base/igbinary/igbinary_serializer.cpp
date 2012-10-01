@@ -759,7 +759,7 @@ int IGBinarySerializer::igbinary_serialize_array_sleep(
                     p = (Variant*)z.getObjectData()->o_realPropPtr(realKey, ObjectData::RealPropWrite|ObjectData::RealPropNoPrivCheck, &retType, false,clsInfo->getName());
                 }
 
-		if (p->getRawType() == KindOfVariant) {
+		if (p && p->getRawType() == KindOfVariant) {
 			CVarRef pass = *p;
 			if (igbinary_serialize_zval(igsd, pass TSRMLS_CC)) {
 			  return 1;

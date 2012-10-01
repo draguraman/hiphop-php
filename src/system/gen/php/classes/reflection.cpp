@@ -733,7 +733,7 @@ void c_ReflectionMethod::t___construct(Variant v_cls, Variant v_name //  = NAMST
       if (toBoolean(v_method)) {
         {
           {
-            const Variant &tmp0((v_method.o_getPublic(NAMSTR(s_sys_ss33988b3e, "info"), true)));
+            const Variant &tmp0((v_method.o_get(NAMSTR(s_sys_ss33988b3e, "info"), true)));
             m_info.assignVal(tmp0);
           }
           {
