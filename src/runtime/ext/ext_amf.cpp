@@ -513,30 +513,16 @@ static void amf_serialize_ctor(amf_serialize_data_t * x, int is_serialize, Varia
 /**  returns the i-th element from the array */
 static int amf_get_index_long(const Variant& ht, int i, int def)
 {
-        for (ArrayIter iter = ht.begin(); iter; ++iter) {
-                Variant key(iter.first());
-                CVarRef var(iter.secondRef());
-                if(key.isInteger()){
-                        if(var.isInteger())
-                        {
-                                return var.getInt64();
-                        }
-                        else if(var.isDouble())
-                        {
-                                return var.getDouble();
-                        }
-                        else if(var.isBoolean())
-                        {
-                                return var.getBoolean()?1:0;
-                        }
-                        else
-                        {
-                                return def;
-                        }
-
-                }
-        }
-        return def;
+	if (ht.toArray().exists(i)) {
+		Variant pData = (ht.toArray())[i];	
+		if (pData.isInteger()) {
+			return pData.getInt64();
+		} else {
+			return def;
+		}
+	} else {
+		return def;
+	}
 }
 
 
@@ -972,12 +958,12 @@ static void amf3_write_objecthead(amf_serialize_output buf, int head )
 /**  serializes an Hash Table as AMF3 as plain object */
 static void amf3_serialize_object_default(amf_serialize_output buf,const Variant& myht, const char * className,int classNameLen,amf_serialize_data_t*var_hash )
 {
-        Variant val;
+        ulong val;
         int memberCount = 0;
 
-        if (util_hash_find(&(var_hash->classes), (char*)className, val) == SUCCESS)
+        if (util_hash_find(&(var_hash->classes), (char*)className, &val) == SUCCESS)
         {
-                amf3_write_objecthead(buf,val.toInt64() << AMF_CLASS_SHIFT | AMF_INLINE_ENTITY );
+                amf3_write_objecthead(buf,val << AMF_CLASS_SHIFT | AMF_INLINE_ENTITY );
         }
         else
         {
@@ -985,7 +971,7 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
                 const int isDynamic = AMF_CLASS_DYNAMIC;
                 const int isExternalizable = 0;  /*  AMF_CLASS_EXTERNALIZABL */
 
-                util_hash_add(&(var_hash->classes), (ulong)(char*)className, var_no);
+                util_hash_add(&(var_hash->classes), (char*)className, var_no);
                 amf3_write_objecthead(buf,memberCount << AMF_CLASS_MEMBERCOUNT_SHIFT | isExternalizable | isDynamic | AMF_INLINE_CLASS | AMF_INLINE_ENTITY  );
                 amf3_write_string(buf, className,classNameLen,AMF_STRING_AS_TEXT,var_hash );
         }
@@ -2582,7 +2568,8 @@ static int amf_put_in_cache(HashTable * var_hash, Variant & var)
 	return util_hash_next_index_put(var_hash, var);
 }
 
-/*void dump_cache(HashTable *var_hash, char* prompt) {
+/*void dump_cache(HashTable *var_hash, char* prompt) 
+{
 	HashTable::const_iterator iter = var_hash->begin();
 	std::cout<<"====Dump:"<<prompt<<"====\n";
 	while(iter != var_hash->end()) {
@@ -3190,7 +3177,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 bTypedObject = zClassname.toString().length() > 0;
                                  /*  a classdef is an array with named keys for special informatio */
                                  /*  and then a indexed values for the member */
-                                zClassDef = Variant();
+                                zClassDef = amf_get_holder(var_hash);
                                 amf_array_init(zClassDef,nClassMemberCount+2 );
                                 add_next_index_long(zClassDef,(bTypedObject?1:0)|nClassMemberCount << AMF_CLASS_MEMBERCOUNT_SHIFT |iDynamicObject|iExternalizable);
                                 add_next_index_zval(zClassDef, zClassname);
@@ -3207,6 +3194,7 @@ static int amf3_unserialize_var(Variant& rval, const unsigned char **p, const un
                                 }
 
                                 amf_put_in_cache(&(var_hash->classes),zClassDef);  /*  pass referenc */
+				// dump_cache(&(var_hash->classes),"classes");
                         }
 
                          /*  callback for externalizable or classnames not nul */
