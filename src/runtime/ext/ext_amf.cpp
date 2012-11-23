@@ -20,7 +20,6 @@
 
 #include <system/lib/systemlib.h>
 
-
 #include <iostream>
 #include <string>
 #include <hash_map>
@@ -784,7 +783,7 @@ static int amf_cache_zval_typed(amf_serialize_data_t*var_hash, const Variant& va
         }
 }
 /*  Encode {{{1*/
-static void amf0_serialize_var(amf_serialize_output buf, const Variant&struc, amf_serialize_data_t*var_hash, void * suggestedIndex = NULL);
+static void amf0_serialize_var(amf_serialize_output buf, const Variant&struc, amf_serialize_data_t*var_hash, bool foundkey = false);
 static void amf3_serialize_var(amf_serialize_output buf, const Variant&struc, amf_serialize_data_t *var_hash, void * suggestedIndex = NULL);
 static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, amf_serialize_data_t *var_hash );
 static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, amf_serialize_data_t* var_hash );
@@ -1046,9 +1045,20 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
 			}
 			} else if (myht.getType() == KindOfArray) {
 				if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
-				   p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);	
+				   if (!(myht.toArray())->isSharedMap()){
+				   	p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);	
+				   }
+				   else {
+					p =  (myht.toArray()->getDataAddress(key.toCStrRef() , true));
+				  }
 				} else {
-				   p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);	
+				   if (!myht.toArray()->isSharedMap()){
+					   p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);	
+				  }
+				  else {
+                                        p = (myht.toArray()->getDataAddress(key.asInt64Val() , true));
+                                  }
+
 				}
 
 				if (p && p->getRawType() == KindOfVariant) {
@@ -1368,20 +1378,30 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 			}
 			if (p && p->getRawType() == KindOfVariant) {
 			    CVarRef pass = *p;
-                            amf0_serialize_var(buf, pass, var_hash );
+                            amf0_serialize_var(buf, pass, var_hash);
 			    continue;
 			}
 			}
 			/* Fall Through */
 			} else if (z.getType() == KindOfArray) {
 				if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
-				   p = z.toArray().lvalPtr(key.toCStrRef(),false,false);	
-				} else {
-				   p = z.toArray().lvalPtr(key.asInt64Val(),false, false);	
-				}
+				  if (!z.toArray()->isSharedMap()){
+                                        p = z.toArray().lvalPtr(key.toCStrRef(),false,false);
+                                   }
+                                   else {
+                                        p = (z.toArray()->getDataAddress(key.toCStrRef() , true));
+                                  }
+                                } else {
+                                   if (!z.toArray()->isSharedMap()){
+                                           p = z.toArray().lvalPtr(key.asInt64Val(),false, false);
+                                  }
+                                  else {
+                                        p = (z.toArray()->getDataAddress(key.asInt64Val() , true));
+                                  }
+ 				}
 				if (p && p->getRawType() == KindOfVariant) {
 				    CVarRef pass = *p;
-				    amf0_serialize_var(buf, pass, var_hash );
+				    amf0_serialize_var(buf, pass, var_hash);
 				    continue;
 				} 
 			} else  {
@@ -1389,7 +1409,7 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
 			}
 		
 		} 
-		amf0_serialize_var(buf, val, var_hash );
+		amf0_serialize_var(buf, val, var_hash);
         }
         amf0_write_endofobject(buf );
 }
@@ -1781,7 +1801,12 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                 else
                                                 {
 							// Fixme relookup
-							Variant *p = htRow.toArray().lvalPtr(key.toInt64(),false, false);
+							Variant *  p = NULL;
+							if (!htRow.toArray()->isSharedMap())
+								p = htRow.toArray().lvalPtr(key.toInt64(),false, false);
+							else 
+								p = (htRow.toArray()->getDataAddress(key.toInt64(),true));
+
 							if (p && p->getRawType() == KindOfVariant) {
 							amf3_serialize_var(buf, *p, var_hash );
 							} else {
@@ -1897,9 +1922,20 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 						} 						
 						} else if (myht.getType() == KindOfArray) {
 							if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
-							   p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);	
+								if (!myht.toArray()->isSharedMap()){
+									p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);
+								}
+								else {
+									p = (myht.toArray()->getDataAddress(key.toCStrRef() , true));
+								}
 							} else {
-							   p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);	
+								if (!myht.toArray()->isSharedMap()){
+									p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);
+								}
+								else {
+									p = (myht.toArray()->getDataAddress(key.asInt64Val() , true));
+								}
+
 							}
 						} else  {
 							raise_error("Invalid type of object seen in serialize array");
@@ -1976,11 +2012,22 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
 							} 							
 						} else if (myht.getType() == KindOfArray) {
 								if (key.getType() == KindOfString || key.getType() == KindOfStaticString) {
-								   p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);	
+									if (!myht.toArray()->isSharedMap()){
+										p = myht.toArray().lvalPtr(key.toCStrRef(),false,false);
+									}
+									else {
+										p = (myht.toArray()->getDataAddress(key.toCStrRef() , true));
+									}
 								} else {
-								   p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);	
+									if (!myht.toArray()->isSharedMap()){
+										p = myht.toArray().lvalPtr(key.asInt64Val(),false, false);
+									}
+									else {
+										p = (myht.toArray()->getDataAddress(key.asInt64Val() , true));
+									}
+
 								}
-							} else  {
+						} else  {
 								raise_error("Invalid type of object seen in serialize array");
 							}
 							if (p && p->getRawType() == KindOfVariant) {
@@ -2017,7 +2064,11 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                 {
 							{
                                                 // Fixme relookup
-							Variant *p = myht.toArray().lvalPtr(iIndex,false, false);
+							Variant * p = NULL;
+							if (!myht.toArray()->isSharedMap())
+								p = myht.toArray().lvalPtr(iIndex,false, false);
+							else 
+								p = (myht.toArray()->getDataAddress(iIndex,true));
 							if (p && p->getRawType() == KindOfVariant) {
 							amf3_serialize_var(buf, *p, var_hash );
 							} else {
@@ -2170,7 +2221,11 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
 					
 						Variant *p = NULL;
 						if (myht.getType() == KindOfArray) {
-							p = myht.toArray().lvalPtr("id",false, false);
+							if (!myht.toArray()->isSharedMap())
+								p = myht.toArray().lvalPtr("id",false, false);
+							else 
+								p = (myht.toArray()->getDataAddress("id",true));
+
 							if (p && p->getRawType() == KindOfVariant) {
 							    amf0_serialize_var(buf, *p, var_hash );
 							} else {
@@ -2275,11 +2330,17 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                                                 }
                                                                 else
                                                                 {
-									Variant *p = htRow.toArray().lvalPtr(keyIndex,false, false);
+									Variant *p = NULL;
+									if (!htRow.toArray()->isSharedMap())	
+										p = htRow.toArray().lvalPtr(keyIndex,false, false);
+									else
+										p = (htRow.toArray()->getDataAddress(keyIndex,true));
+
 									if (p && p->getRawType() == KindOfVariant) {
                                                                            amf0_serialize_var(buf, *p, var_hash );
 									} else {
                                                                            amf0_serialize_var(buf, var, var_hash );
+
 									}
                                                                 }
                                                                 iColumn++;
@@ -2359,7 +2420,12 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
                                 }
                                 else
                                 {
-					Variant *p = myht.toArray().lvalPtr(iIndex,false, false);
+					Variant *p = NULL;
+					if (!myht.toArray()->isSharedMap())
+						p = myht.toArray().lvalPtr(iIndex,false, false);
+					else
+						 p = (myht.toArray()->getDataAddress(iIndex,true));
+
 					if (p && p->getRawType() == KindOfVariant) {
 						amf0_serialize_var(buf, *p, var_hash );
 					} else {
@@ -2384,7 +2450,7 @@ static void amf0_serialize_array(amf_serialize_output buf, const Variant& myht, 
         }
 }
 
-static void amf0_serialize_var(amf_serialize_output buf, const Variant & struc, amf_serialize_data_t *var_hash , void *suggestIndex)
+static void amf0_serialize_var(amf_serialize_output buf, const Variant & struc, amf_serialize_data_t *var_hash , bool foundkey)
 {
         ulong objectIndex;
 
@@ -2412,7 +2478,7 @@ static void amf0_serialize_var(amf_serialize_output buf, const Variant & struc, 
                         amf0_serialize_object(buf,struc,var_hash );
                         return;
                 case KindOfArray:
-                        if(amf_cache_zval(&(var_hash->objects0), struc, &objectIndex,&(var_hash->nextObject0Index),0, suggestIndex) == FAILURE)
+                        if((struc.getRawType() == KindOfVariant) && amf_cache_zval(&(var_hash->objects0), struc, &objectIndex,&(var_hash->nextObject0Index),0, NULL) == FAILURE)
                         {
                                 amf_write_byte(buf, AMF0_REFERENCE);
                                 amf0_write_short(buf, objectIndex );

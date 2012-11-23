@@ -252,6 +252,8 @@ public:
 
   static void GetArray_forSer(const ObjectData *obj, const ClassPropTable *ct,
                        Array &props, bool pubOnly, Array* odata = NULL);
+   static void GetArray_withProtected(const ObjectData *obj, const ClassPropTable *ct,
+                         Array &props, bool pubOnly, Array *odata = NULL);
   static void GetArray(const ObjectData *obj, const ClassPropTable *ct,
                        Array &props, bool pubOnly, Array* odata = NULL);
   static void SetArray(ObjectData *obj, const ClassPropTable *ct, CArrRef props);

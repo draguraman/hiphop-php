@@ -22,9 +22,8 @@
 #include <util/lock.h>
 #include <runtime/base/class_info.h>
 #include <runtime/base/fiber_reference_map.h>
-
 #include <runtime/eval/ast/function_call_expression.h>
-
+#include <runtime/base/shared/shared_map.h>
 #include <system/lib/systemlib.h>
 
 using namespace std;
@@ -742,8 +741,8 @@ Variant *ObjectData::RealPropPublicHelper(
   if (propName.size() > 0 &&
       !(flags & RealPropNoDynamic) &&
       (obj->o_properties.get() || (flags & RealPropCreate))) {
-    return const_cast<ObjectData*>(obj)->o_properties.lvalPtr(
-      propName, flags & RealPropWrite, flags & RealPropCreate);
+  	  return const_cast<ObjectData*>(obj)->o_properties.lvalPtr(
+   			propName, flags & RealPropWrite, flags & RealPropCreate);
   }
 
   return NULL;
@@ -1064,7 +1063,12 @@ Variant ObjectData::o_argval(bool byRef, CStrRef s,
 Object ObjectData::FromArray(ArrayData *properties) {
   ObjectData *ret = SystemLib::AllocStdClassObject();
   if (!properties->empty()) {
-    ret->o_properties = properties;
+    if (properties->isSharedMap()){
+        ret->o_properties =   ( ((SharedMap *)properties)->fiberCopy());        
+        }
+    else {
+    	ret->o_properties = properties;
+     }
   }
   return ret;
 }
@@ -1178,7 +1182,7 @@ Array ObjectData::o_toArray_withInfo(Array *p, bool pubOnly) const {
 Array ObjectData::o_toArray() const {
   Array ret(ArrayData::Create());
   ObjectData *root = const_cast<ObjectData*>(this)->getRoot();
-  ClassInfo::GetArray(root, root->o_getClassPropTable(), ret, false);
+  ClassInfo::GetArray_withProtected(root, root->o_getClassPropTable(), ret, false);
   return ret;
 }
 

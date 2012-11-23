@@ -64,6 +64,9 @@ public:
     return idx < size();
   }
 
+  Variant * getDataAddress(CStrRef k , bool error = false) const; 	// use with caution. Defined only for use in igbinary and amf extensions where lvalPtr of Shared map is needed
+  Variant * getDataAddress(int64 k , bool error = false) const;
+
   CVarRef get(int64 k, bool error = false) const;
   CVarRef get(litstr k, bool error = false) const;
   CVarRef get(CStrRef k, bool error = false) const;

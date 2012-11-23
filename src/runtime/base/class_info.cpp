@@ -1046,7 +1046,70 @@ void ClassInfo::GetArray_forSer(const ObjectData *obj, const ClassPropTable *ct,
   obj->o_getArray(props, pubOnly);
 }
 
+void ClassInfo::GetArray_withProtected(const ObjectData *obj, const ClassPropTable *ct,
+                         Array &props, bool pubOnly, Array *odata/* = Null*/) {
+  while (ct) {
+    const ClassPropTableEntry *p = ct->m_entries;
+    int off = ct->m_offset;
+     String keyName; 
+     String header;
+    if (off >= 0) do {
+      p += off;
+      keyName = *p->keyName;
+      if (p->isProtected()) {
+          header = String("\0*\0",3,AttachLiteral);
+          keyName = header + keyName;
+      } else if (p->isPrivate()) {
+          if (keyName.charAt(0) != '\0') {
+          header =String("\0",1, AttachLiteral);
 
+          keyName = header + obj->o_getClassName()+header + keyName;
+          }
+      }
+
+      if (odata) {
+        Array pe = Array::Create();
+        pe.set("type",(p->type));
+        pe.set("offset",(p->offset));
+        odata->set(p->keyName->lastToken((char)0),pe,true);
+      }
+      if (!pubOnly || p->isPublic()) {
+        if (p->isOverride()) {
+          /* The actual property is stored in a base class,
+             but we need to set the entry here, to get the
+             iteration order right */
+          props.set(keyName, null_variant, true);
+          continue;
+        }
+        const char *addr = ((const char *)obj) + p->offset;
+        if (LIKELY(p->type == KindOfVariant)) {
+          if (isInitialized(*(Variant*)addr)) {
+            props.lvalAt(keyName, AccessFlags::Key)
+                 .setWithRef(*(Variant*)addr);
+          }
+          continue;
+        }
+        Variant v = p->getVariant(addr);
+        if (p->isPrivate() || p->isProtected()) {
+
+          props.add(keyName, v, true);
+        } else {
+          props.set(keyName, v, true);
+        }
+      }
+    } while ((off = p->next) != 0);
+    ct = ct->m_parent;
+    if (!ct) {
+      ObjectData *parent = obj->getRedeclaredParent();
+      if (parent) {
+        ASSERT(parent != obj);
+        obj = parent;
+        ct = obj->o_getClassPropTable();
+      }
+    }
+  }
+  obj->o_getArray(props, pubOnly);
+}
 void ClassInfo::GetArray(const ObjectData *obj, const ClassPropTable *ct,
                          Array &props, bool pubOnly, Array *odata/* = Null*/) {
   while (ct) {

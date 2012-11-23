@@ -189,7 +189,13 @@ class ArrayData : public Countable {
                              bool create);
   virtual ArrayData *lvalPtr(int64   k, Variant *&ret, bool copy,
                              bool create);
-
+ /*
+ lvalPtr is not defined in shared map. 
+ these functions act as substitue for the same.
+ use with caution. Defined for igbinary and amf where reference to shared map is needed
+*/
+ virtual Variant *getDataAddress(CStrRef k , bool err ) const;
+ virtual Variant *getDataAddress(int64 k , bool err ) const;
   /**
    * Setting a value at specified key. If "copy" is true, make a copy first
    * then set the value. Return NULL if escalation is not needed, or an

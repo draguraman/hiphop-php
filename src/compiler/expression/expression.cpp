@@ -784,8 +784,9 @@ void Expression::preOutputStash(CodeGenerator &cg, AnalysisResultPtr ar,
 
   TypePtr srcType, dstType, dstType0;
   bool needsCast = getTypeCastPtrs(ar, srcType, dstType);
-
-  bool isLvalue = (m_context & LValue);
+  // For some reason LValue is not set for the function unset so hacking it
+  // here for now
+  bool isLvalue = (m_context & LValue || m_context & UnsetContext);
   bool isTemp = isTemporary();
 
   bool isReferenced = true;
@@ -835,7 +836,7 @@ void Expression::preOutputStash(CodeGenerator &cg, AnalysisResultPtr ar,
   if (dstType) {
     bool inlinedRefReturn = hasAllContext(LValue|ReturnContext) &&
       !hasAnyContext(InvokeArgument|RefValue);
-    bool refParam = hasContext(RefValue) &&
+    bool refParam = hasAnyContext(RefValue) &&
       !hasAnyContext(InvokeArgument|AssignmentRHS|ReturnContext) &&
       (is(KindOfObjectPropertyExpression) ||
        is(KindOfArrayElementExpression));
@@ -1307,7 +1308,7 @@ bool Expression::preOutputCPPTemp(CodeGenerator &cg, AnalysisResultPtr ar,
         it != temps.end();
         ++it) {
       ExpressionPtr p(*it);
-      if (p->hasCPPCseTemp()) continue;
+      if (p->hasCPPCseTemp()) { continue; }
 
       p->m_cppCseTemp = genCPPTemp(cg, ar);
       TypePtr t;

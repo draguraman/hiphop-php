@@ -177,6 +177,20 @@ void ArrayData::load(CVarRef k, Variant &v) const {
   if (exists(k)) v = get(k);
 }
 
+
+/*
+ lvalPtr is not defined in shared map. 
+ these functions act as substitue for the same.
+ use with caution. Defined for igbinary and amf where reference to shared map is needed
+*/
+Variant *ArrayData::getDataAddress(CStrRef k , bool err = false) const{
+ throw FatalErrorException("Unimplemented ArrayData::getDataAddress");
+}
+Variant *ArrayData::getDataAddress(int64 k , bool err = false) const{
+ throw FatalErrorException("Unimplemented ArrayData::getDataAddress");
+}
+
+
 ArrayData *ArrayData::lvalPtr(CStrRef k, Variant *&ret, bool copy,
                               bool create) {
   throw FatalErrorException("Unimplemented ArrayData::lvalPtr");

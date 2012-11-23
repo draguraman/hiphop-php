@@ -20,7 +20,7 @@
 #include <runtime/base/array/array_init.h>
 #include <runtime/base/runtime_option.h>
 #include <runtime/base/runtime_error.h>
-
+#include <util/logger.h>
 namespace HPHP {
 
 IMPLEMENT_SMART_ALLOCATION(SharedMap, SmartAllocatorImpl::NeedRestore);
@@ -74,6 +74,42 @@ ssize_t SharedMap::getIndex(CStrRef k) const {
 }
 ssize_t SharedMap::getIndex(CVarRef k) const {
   return m_arr->getIndex(k);
+}
+
+Variant * SharedMap::getDataAddress(CStrRef k, bool error /* = false */) const{
+ int index = m_arr->getIndex(k);
+  if (index == -1) {
+    if (error) {
+      raise_notice("Undefined index: %s", k.data());
+    }
+    return NULL;
+  }
+  SharedVariant *sv = m_arr->getValue(index);
+  DataType t = sv->getType();
+  if (!IS_REFCOUNTED_TYPE(t)) {
+	Logger::Error("Returning NULL for a NON_REF_COUNT_TYPE in shared map. Assumption : this function is used for getting ref to shared map and it will always be ref_counted unless static ");	
+  	return NULL;
+  }
+  Variant *pv = m_localCache.lvalPtr((int64)index, false, false);
+  return pv;
+}
+
+Variant * SharedMap::getDataAddress(int64 k, bool error /* = false */) const{
+ int index = m_arr->getIndex(k);
+  if (index == -1) {
+    if (error) {
+      raise_notice("Undefined index: %ld", k);
+    }
+    return NULL;
+  }
+  SharedVariant *sv = m_arr->getValue(index);
+  DataType t = sv->getType();
+  if (!IS_REFCOUNTED_TYPE(t)){
+	Logger::Error("Returning NULL for a NON_REF_COUNT_TYPE in shared map. Assumption : this function is used for getting ref to shared map and it will always be ref_counted unless static ");
+  	return NULL;	
+  }
+  Variant *pv = m_localCache.lvalPtr((int64)index, false, false);
+  return pv;
 }
 
 CVarRef SharedMap::get(CVarRef k, bool error /* = false */) const {
