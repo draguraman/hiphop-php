@@ -40,7 +40,6 @@ IMPLEMENT_DEFAULT_EXTENSION(amf);
 #define FAILURE -1                 /* this MUST stay a negative number, or it may affect functions! */
 
 
-static int printstrings (const char * buf, const int bufLen);
 
 #define amf_error_docref php_error_docref
 #define amf_error_docref1 php_error_docref
@@ -49,7 +48,6 @@ static int printstrings (const char * buf, const int bufLen);
 #define RETURN_FALSE_ { amf_error_docref(NULL , E_WARNING, "Error ---->");amf_error_docflush();RETURN_FALSE } while(0);
 #define RETURN_TRUE_ if (0) {amf_error_docref(NULL , E_WARNING, "No Issues ---->");amf_error_docflush();}
 
-static  long dump_strings_on_decode_err = 0;
 static  long max_alloc_size = 10485760;
 
 
@@ -57,14 +55,18 @@ static  long max_alloc_size = 10485760;
 
 /********* Debugging Info ****************/
 static int amf_bailout();
+/*
+static  long dump_strings_on_decode_err = 0;
+static int printstrings (const char * buf, const int bufLen);
 static void printData (char * p, int len);
+*/
 #define php_error_docref(a,b,...) {  \
 if (E_WARNING == b) {                \
 	Logger::Warning(__VA_ARGS__);\
 } else {                             \
 	Logger::Error(__VA_ARGS__);  \
 } }                                
-
+/*
 static int encode2hex (const char * data, const unsigned int dataLen,
                  char *hexData, unsigned int *hexDataLen)
 {
@@ -159,7 +161,7 @@ static int printstrings (const char * buf, const int bufLen)
  	}
   	return 0;
 }
-
+*/
 /*  AMF enumeration {{{1*/
 
 /**  AMF0 types */
@@ -553,6 +555,7 @@ static int amf_get_assoc_long(const Variant& ht, const char * field, int def)
 	}
 	return def;
 }
+/*
 static int util_hash_index_put(HashTable *ht, const char * field, Variant & pData) {
 	string k = field;
 	(*ht)[k] = &pData;
@@ -572,7 +575,7 @@ static int util_hash_index_put(HashTable *ht, ulong h, ulong l) {
         string k = ss.str();
 	(*ht)[k]= (Variant*)l;
         return SUCCESS;
-}
+}*/
 
 static int util_hash_next_index_put(HashTable *ht, Variant& pData) {
 	std::ostringstream ss;
@@ -625,6 +628,7 @@ static int util_hash_index_find(HashTable *ht, char* h, ulong* idx) {
 
 }
 
+/*
 static int util_hash_index_find(HashTable *ht, char* h, Variant& pData) {
 	std::string k = h;
         HashTable::iterator res = ht->find(k);
@@ -659,7 +663,7 @@ static int variant_hash_find(const Variant& ht, const char * field, Variant & pD
         }
         return FAILURE;
 }
-
+*/
 static int variant_hash_find(const Variant& ht, const Variant& key, Variant& pData)
 {
         if (ht.getType() == KindOfArray) {
@@ -690,6 +694,8 @@ static int variant_hash_find(const Variant& ht, const Variant& key, Variant& pDa
 static int util_hash_num_elements(HashTable *ht) {
     return ht->size();
 }
+
+/*
 static int util_hash_quick_add(HashTable *ht, ulong h, Variant& pData) {
 	std::ostringstream ss;
  	ss<<h;
@@ -697,7 +703,7 @@ static int util_hash_quick_add(HashTable *ht, ulong h, Variant& pData) {
         (*ht)[k] = &pData;
 	
         return SUCCESS;
-}
+}*/
 static int util_hash_quick_add(HashTable *ht, char *h, ulong v) {
         string k = h;
         (*ht)[k] = (Variant*) v;
@@ -712,12 +718,14 @@ static int util_hash_quick_add(HashTable *ht, ulong h, ulong v) {
 	
         return SUCCESS;
 }
+/*
 static int util_hash_quick_add(HashTable *ht, char* h, Variant& pData) {
 	std::string k = h;
         (*ht)[k] = &pData;
 	
         return SUCCESS;
 }
+*/
 static int util_array_num_elements(const Variant & var) {
   return var.toArray().length();
 
@@ -954,6 +962,7 @@ static void amf3_write_objecthead(amf_serialize_output buf, int head )
         amf3_write_int(buf, head );
 }
 
+#pragma GCC diagnostic ignored "-Wformat"
 /**  serializes an Hash Table as AMF3 as plain object */
 static void amf3_serialize_object_default(amf_serialize_output buf,const Variant& myht, const char * className,int classNameLen,amf_serialize_data_t*var_hash )
 {
@@ -1077,6 +1086,7 @@ static void amf3_serialize_object_default(amf_serialize_output buf,const Variant
         amf3_write_emptystring(buf );
 }
 
+#pragma GCC diagnostic warning "-Wformat"
 static int amf_perform_serialize_callback_event(int ievent, const Variant& arg0,Variant& zResultValue, int shared, amf_serialize_data_t * var_hash )
 {
         if(var_hash->callbackFx != null_variant)
@@ -1316,6 +1326,7 @@ static void amf3_serialize_object(amf_serialize_output buf,const Variant& struc,
    utfname data
    w(0) b(9)
 */
+#pragma GCC diagnostic ignored "-Wformat"
 static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z, int isArray, amf_serialize_data_t*var_hash )
 {
 	  Array odata = Array::Create();
@@ -1414,6 +1425,7 @@ static void amf0_serialize_objectdata(amf_serialize_output buf, const Variant&z,
         amf0_write_endofobject(buf );
 }
 
+#pragma GCC diagnostic warning "-Wformat"
 /*
  serializes an object
  objectdata:
@@ -1681,6 +1693,7 @@ static int amf3_write_string_zval(amf_serialize_output buf, const Variant& strin
                 }
         }
 }
+#pragma GCC diagnostic ignored "-Wformat"
 
 static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, amf_serialize_data_t *var_hash )
 {
@@ -2090,6 +2103,7 @@ static void amf3_serialize_array(amf_serialize_output buf, const Variant& myht, 
                 amf3_write_emptystring(buf );
         }
 }
+#pragma GCC diagnostic warning "-Wformat"
 
 static void amf3_serialize_var(amf_serialize_output buf, const Variant& struc, amf_serialize_data_t *var_hash , void *suggestIndex)
 {
@@ -2545,7 +2559,7 @@ static int amf_in_limit(const unsigned char * ptr, const unsigned char * max, lo
         }
         return SUCCESS;
 }
-
+/*
 static void print_hex_string(Variant  param[])
 {
 PRINT("print_hex_string");
@@ -2560,7 +2574,7 @@ PRINT("print_hex_string");
 
   printData ((char *)arg, argLen);
 }
-
+*/
 
 
 /*  Decoding {{{1*/
