@@ -106,6 +106,7 @@ class c_SimpleXMLElement :
   Variant m_children;
   Variant m_attributes;
   Array m_array;
+  Array m_inorder;
   bool m_is_text;
   bool m_free_text;
   bool m_is_attribute;

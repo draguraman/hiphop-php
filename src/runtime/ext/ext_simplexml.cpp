@@ -20,6 +20,7 @@
 #include <runtime/ext/ext_domdocument.h>
 #include <runtime/base/class_info.h>
 #include <runtime/base/util/request_local.h>
+#include <util/logger.h>
 #include <runtime/base/variable_serializer.h>
 
 #include <system/lib/systemlib.h>
@@ -180,6 +181,7 @@ static c_SimpleXMLElement *create_element(CObjRef doc, xmlNodePtr node,
 static Array create_children(CObjRef doc, xmlNodePtr root,
                              CStrRef ns, bool is_prefix, c_SimpleXMLElement *parent) {
   Array properties = Array::Create();
+  Array inorder = Array::Create();
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if(Debug_Node_Creation) std::cout<<"Creating Children:"<<((node->name)?(char*)node->name:"(NULL)")<<"\n";
     if (node->children || node->prev || node->next) {
@@ -190,10 +192,11 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
     } else {
       if (node->type == XML_TEXT_NODE || node->type == XML_CDATA_SECTION_NODE ) {
         if (node->content && *node->content) {
+	  Object newObj = create_text(doc, node, node_list_to_string(root->doc, node),
+                         ns, is_prefix, true, parent);
           add_property
-            (properties, root,
-             create_text(doc, node, node_list_to_string(root->doc, node),
-                         ns, is_prefix, true, parent), isSpaceString(node, node->content));
+            (properties, root, newObj, isSpaceString(node, node->content));
+	  inorder.append(newObj);
         }
         continue;
       }
@@ -212,8 +215,14 @@ static Array create_children(CObjRef doc, xmlNodePtr root,
         sub = create_element(doc, node, ns, is_prefix, parent);
       }
       add_property(properties, node, sub);
+	  inorder.append(sub);
     }   
     }
+	if (parent) {
+		parent->m_inorder = inorder;
+	} else {
+		Logger::Info("parent is NULL");
+	}
   return properties;
 }
 
@@ -338,6 +347,7 @@ c_SimpleXMLElement::c_SimpleXMLElement(const ObjectStaticCallbacks *cb) :
   setAttribute(HasLval);
   m_children = Array::Create();
   m_array = Array::Create();
+  m_inorder = Array::Create();
 }
 c_SimpleXMLElement::~c_SimpleXMLElement() {
   if (m_xpath) {
@@ -605,6 +615,7 @@ Object c_SimpleXMLElement::t_children(CStrRef ns /* = "" */,
   if (ns.empty()) {
     //elem->m_children.assignRef(m_children);
     elem->m_children = removeComment(m_children, ns, is_prefix);
+    elem->m_inorder = m_inorder;
   } else {
     Array props = Array::Create();
     for (ArrayIter iter(m_children); iter; ++iter) {
@@ -671,8 +682,10 @@ Object c_SimpleXMLElement::t_attributes(CStrRef ns /* = "" */,
     }
     for (ArrayIter iter(elem->m_attributes) ; iter; ++iter) {
         elem->m_children.set(iter.first(), iter.second());
+        elem->m_inorder.set(iter.first(), iter.second());
     }
     elem->m_children.set("@attributes", elem->m_attributes);
+    elem->m_inorder.set("@attributes", elem->m_attributes);
   }
   return elem;
 }
@@ -839,6 +852,7 @@ Variant c_SimpleXMLElement::t___get(Variant name) {
     e->m_doc = elem->m_doc;
     e->m_node = elem->m_node;
     e->m_children.assignRef(elem->m_children);
+    e->m_inorder = elem->m_inorder;
     e->m_attributes.assignRef(elem->m_attributes);
     e->m_array = elem->m_array;
     e->m_is_text = elem->m_is_text;
@@ -851,6 +865,7 @@ Variant c_SimpleXMLElement::t___get(Variant name) {
     e->m_doc = this->m_doc; 
     e->m_node = this->m_node;
     e->m_children.set(0,ret);
+    e->m_inorder.set(0,ret);
     e->m_array.set(0,ret);
     e->m_is_text = this->m_is_text;
     e->m_is_attribute = this->m_is_attribute;
@@ -1250,8 +1265,8 @@ void c_SimpleXMLElementIterator::reset_iterator() {
     }
   }
   } else {
-  if (m_parent->m_children.toArray().size() == 1) {
-    ArrayIter iter(m_parent->m_children);
+  if (m_parent->m_inorder.size() == 1) {
+    ArrayIter iter(m_parent->m_inorder);
     if (iter.second().isObject()) {
       c_SimpleXMLElement *elem = iter.second().toObject().
         getTyped<c_SimpleXMLElement>();
@@ -1270,7 +1285,7 @@ void c_SimpleXMLElementIterator::reset_iterator() {
   }
   }
   } else {
-  m_iter1 = new ArrayIter(m_parent->m_children);
+  m_iter1 = new ArrayIter(m_parent->m_inorder);
   if (!m_iter1->end() && m_iter1->second().isArray()) {
     m_iter2 = new ArrayIter(m_iter1->second());
   }
@@ -1308,7 +1323,16 @@ Variant c_SimpleXMLElementIterator::t_current() {
 Variant c_SimpleXMLElementIterator::t_key() {
   INSTANCE_METHOD_INJECTION_BUILTIN(SimpleXMLElementIterator, SimpleXMLElementIterator::key);
   if (m_iter1) {
-    return m_iter1->first();
+      if (m_iter1->second().isObject()) {
+          c_SimpleXMLElement *elem = m_iter1->second().toObject().
+          getTyped<c_SimpleXMLElement>();
+          int namelen = xmlStrlen(elem->m_node->name);
+          String sname((char*)elem->m_node->name, namelen, CopyString);
+          return sname;
+      } else {
+	  String sname = m_iter1->first().toString();
+	  return sname;
+      }
   }
   return null;
 }
